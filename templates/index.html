@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>03:17 — Incidente em Produção</title>
+</head>
+
+<body>
+    <header>
+        <h1>{{ incidente.horario }}</h1>
+        <p>{{ incidente.nivel }}</p>
+    </header>
+
+    <main>
+        <section>
+            <h2>{{ incidente.titulo }}</h2>
+            <p>{{ incidente.descricao }}</p>
+
+            <div>
+                <p>
+                    Pontuação:
+                    {{ estado.pontuacao }}
+                </p>
+
+                <p>
+                    Usuários afetados:
+                    {{ estado.usuarios_afetados }}
+                </p>
+
+                <p>
+                    Decisões tomadas:
+                    {{ estado.acoes_realizadas | length }}
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Logs do sistema</h2>
+
+            <ul>
+                {% for log in incidente.logs %}
+                    <li>{{ log }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        {% if estado.finalizado %}
+            <section>
+                <h2>
+                    {{ estado.resultado_final.titulo }}
+                </h2>
+
+                <p>
+                    {{ estado.resultado_final.mensagem }}
+                </p>
+
+                {% if estado.resultado_final.sucesso %}
+                    <p>Você resolveu o incidente!</p>
+                {% else %}
+                    <p>
+                        Você não conseguiu controlar o incidente.
+                    </p>
+                {% endif %}
+            </section>
+
+        {% elif resultado %}
+            <section>
+                <h2>{{ resultado.titulo }}</h2>
+                <p>{{ resultado.mensagem }}</p>
+            </section>
+        {% endif %}
+
+        {% if not estado.finalizado %}
+            <section>
+                <h2>Qual é sua próxima ação?</h2>
+
+                <div class="acoes">
+                    {% for acao in incidente.acoes %}
+                        <form
+                            action="{{ url_for('escolher_acao') }}"
+                            method="POST"
+                        >
+                            <button
+                                type="submit"
+                                name="acao"
+                                value="{{ acao.id }}"
+                                {% if acao.id in estado.acoes_realizadas %}
+                                    disabled
+                                {% endif %}
+                            >
+                                <strong>
+                                    {{ acao.titulo }}
+                                </strong>
+
+                                <span>
+                                    {{ acao.descricao }}
+                                </span>
+                            </button>
+                        </form>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <form
+            action="{{ url_for('reiniciar') }}"
+            method="POST"
+        >
+            <button type="submit">
+                Reiniciar partida
+            </button>
+        </form>
+    </main>
+</body>
+</html>
