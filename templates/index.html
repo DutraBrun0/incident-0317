@@ -2,94 +2,428 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>03:17 — Incidente em Produção</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 </head>
 
 <body>
-    <header>
-        <h1>{{ incidente.horario }}</h1>
-        <p>{{ incidente.nivel }}</p>
-    </header>
+    {% set acoes_historico =
+        estado.historico
+        | selectattr("executada")
+        | list
+    %}
 
-    <main>
-        <section>
-            <h2>{{ incidente.titulo }}</h2>
-            <p>{{ incidente.descricao }}</p>
+    <div class="marca-horario" aria-hidden="true">
+        03:17
+    </div>
 
-            <div>
-                <p>Pontuação: {{ estado.pontuacao }}</p>
+    <header class="topo">
+        <div class="marca">
+            <p class="marca-nome">
+                INCIDENT <strong>03:17</strong>
+            </p>
 
-                <p>
-                    Usuários afetados:
-                    {{ estado.usuarios_afetados }}
-                </p>
+            <span
+                class="marca-divisor"
+                aria-hidden="true"
+            ></span>
 
-                <p>
-                    Tempo restante:
-                    {{ estado.tempo_restante // 60 }} minutos
-                </p>
+            <div class="marca-descricao">
+                <p>SIMULADOR DE RESPOSTA A INCIDENTES</p>
 
-                <p>Fase: {{ estado.fase }}</p>
-
-                <p>
-                    Pistas encontradas:
-                    {{ estado.pistas_encontradas | length }}
-                </p>
+                <span>
+                    PESSOAS / SISTEMAS / DECISÕES / IMPACTO
+                </span>
             </div>
-        </section>
+        </div>
 
-        <section class="terminal">
-            <h2>Terminal de resposta</h2>
-
-            <div class="terminal-saida">
-                {% for log in incidente.logs %}
-                    <p>[SISTEMA] {{ log }}</p>
-                {% endfor %}
-
-                {% for item in estado.historico %}
-                    <div>
-                        <p>
-                            <strong>operador@0317:~$</strong>
-                            {{ item.comando }}
-                        </p>
-
-                        <p>
-                            [{{ item.titulo }}]
-                            {{ item.resposta }}
-                        </p>
-                    </div>
-                {% endfor %}
+        <div class="topo-status">
+            <div class="estado-simulacao">
+                <span
+                    class="estado-ponto"
+                    aria-hidden="true"
+                ></span>
 
                 {% if estado.finalizado %}
-                    <p>
-                        [SISTEMA] Partida encerrada.
-                        Digite "reiniciar" para jogar novamente.
-                    </p>
+                    SIMULAÇÃO ENCERRADA
+                {% else %}
+                    SIMULAÇÃO ATIVA
                 {% endif %}
             </div>
 
-            <form
-                action="{{ url_for('executar_comando') }}"
-                method="POST"
-            >
-                <label for="comando">
-                    operador@0317:~$
-                </label>
+            <span
+                class="status-divisor"
+                aria-hidden="true"
+            ></span>
 
-                <input
-                    type="text"
-                    id="comando"
-                    name="comando"
-                    placeholder='Digite "ajuda"'
-                    autocomplete="off"
-                    spellcheck="false"
-                    autofocus
-                    required
+            <div class="ambiente">
+                <span>AMBIENTE</span>
+                <strong>PRODUÇÃO</strong>
+            </div>
+        </div>
+    </header>
+
+    <main class="conteudo">
+        <aside class="resumo-incidente">
+            <div class="resumo-principal">
+                <p class="incidente-codigo">
+                    INCIDENTE #0317
+                </p>
+
+                <h1>{{ incidente.titulo }}</h1>
+
+                <p class="incidente-descricao">
+                    {{ incidente.descricao }}
+                </p>
+
+                <div class="nivel-incidente">
+                    <span
+                        class="nivel-barra"
+                        aria-hidden="true"
+                    ></span>
+
+                    <div>
+                        <strong>{{ incidente.nivel }}</strong>
+
+                        <p>
+                            USUÁRIOS AFETADOS •
+                            SERVIÇOS INDISPONÍVEIS
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <section
+                class="linha-tempo"
+                aria-labelledby="titulo-linha-tempo"
+            >
+                <header>
+                    <h2 id="titulo-linha-tempo">
+                        LINHA DO TEMPO
+                    </h2>
+
+                    <span>SESSÃO ATUAL</span>
+                </header>
+
+                <ol>
+                    <li class="evento evento-ativo">
+                        <span
+                            class="evento-marcador"
+                            aria-hidden="true"
+                        ></span>
+
+                        <div>
+                            <strong>
+                                {{ incidente.horario }}
+                            </strong>
+
+                            <p>
+                                Incidente detectado em produção
+                            </p>
+                        </div>
+                    </li>
+
+                    {% for item in acoes_historico %}
+                        <li class="evento">
+                            <span
+                                class="evento-marcador"
+                                aria-hidden="true"
+                            ></span>
+
+                            <div>
+                                <strong>
+                                    AÇÃO
+                                    {{ "%02d" | format(loop.index) }}
+                                </strong>
+
+                                <p>{{ item.titulo }}</p>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </section>
+        </aside>
+
+        <section
+            class="area-terminal"
+            aria-label="Terminal do incidente"
+        >
+            <header class="terminal-topo">
+                <div
+                    class="terminal-controles"
+                    aria-hidden="true"
                 >
-            </form>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <p>operador — produção</p>
+
+                <span
+                    class="terminal-minimizar"
+                    aria-hidden="true"
+                >
+                    ─
+                </span>
+            </header>
+
+            <div class="terminal-corpo">
+                <div
+                    class="terminal-saida"
+                    id="terminalSaida"
+                    aria-live="polite"
+                >
+                    <p class="linha linha-clara">
+                        Conexão com produção estabelecida.
+                    </p>
+
+                    <p class="linha linha-secundaria">
+                        Carregando contexto do incidente #0317...
+                    </p>
+
+                    <p class="linha linha-secundaria">
+                        Digite "ajuda" para visualizar os comandos.
+                    </p>
+
+                    <div
+                        class="terminal-espaco"
+                        aria-hidden="true"
+                    ></div>
+
+                    {% for log in incidente.logs %}
+                        <p class="linha linha-log">
+                            <span>[LOG]</span>
+                            {{ log }}
+                        </p>
+                    {% endfor %}
+
+                    {% for item in estado.historico %}
+                        <div class="registro">
+                            <p class="linha linha-comando">
+                                <span>
+                                    operador@incident-0317:~$
+                                </span>
+
+                                {{ item.comando }}
+                            </p>
+
+                            <p class="linha linha-resposta">
+                                <span>
+                                    [{{ item.titulo }}]
+                                </span>
+
+                                {{ item.resposta }}
+                            </p>
+                        </div>
+                    {% endfor %}
+
+                    {% if estado.finalizado and estado.relatorio_final %}
+                        {% set relatorio = estado.relatorio_final %}
+
+                        <div class="terminal-relatorio">
+                            <header class="terminal-relatorio-topo">
+                                <p>
+                                    <span>[RELATÓRIO FINAL]</span>
+                                    INCIDENTE #0317 ENCERRADO
+                                </p>
+
+                                <strong
+                                    class="
+                                        {% if relatorio.sucesso %}
+                                            terminal-relatorio-sucesso
+                                        {% else %}
+                                            terminal-relatorio-falha
+                                        {% endif %}
+                                    "
+                                >
+                                    {{ relatorio.classificacao }}
+                                </strong>
+                            </header>
+
+                            <div class="terminal-relatorio-dados">
+                                <p>
+                                    <span>STATUS</span>
+
+                                    <strong>
+                                        {% if relatorio.sucesso %}
+                                            RESOLVIDO
+                                        {% else %}
+                                            NÃO RESOLVIDO
+                                        {% endif %}
+                                    </strong>
+                                </p>
+
+                                <p>
+                                    <span>PONTUAÇÃO</span>
+
+                                    <strong>
+                                        {{ relatorio.pontuacao }}
+                                    </strong>
+                                </p>
+
+                                <p>
+                                    <span>USUÁRIOS</span>
+
+                                    <strong>
+                                        {{ relatorio.usuarios_afetados }}
+                                    </strong>
+                                </p>
+
+                                <p>
+                                    <span>TEMPO USADO</span>
+
+                                    <strong>
+                                        {{ relatorio.tempo_utilizado }}
+                                    </strong>
+                                </p>
+
+                                <p>
+                                    <span>POSITIVAS</span>
+
+                                    <strong>
+                                        {{ relatorio.decisoes_corretas }}
+                                    </strong>
+                                </p>
+
+                                <p>
+                                    <span>NEGATIVAS</span>
+
+                                    <strong>
+                                        {{ relatorio.decisoes_prejudiciais }}
+                                    </strong>
+                                </p>
+                            </div>
+
+                            <p class="terminal-relatorio-texto">
+                                <span>[ANÁLISE]</span>
+                                {{ relatorio.avaliacao }}
+                            </p>
+
+                            {% if relatorio.sequencia_comandos %}
+                                <p class="terminal-relatorio-texto">
+                                    <span>[SEQUÊNCIA]</span>
+
+                                    {{
+                                        relatorio.sequencia_comandos
+                                        | join(" → ")
+                                    }}
+                                </p>
+                            {% endif %}
+
+                            <p class="terminal-relatorio-reinicio">
+                                [SISTEMA] Digite "reiniciar"
+                                para tentar novamente.
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <form
+                    class="terminal-formulario"
+                    action="{{ url_for('executar_comando') }}"
+                    method="POST"
+                >
+                    <label for="comando">
+                        operador@incident-0317:~$
+                    </label>
+
+                    <input
+                        type="text"
+                        id="comando"
+                        name="comando"
+                        aria-label="Digite um comando"
+                        autocomplete="off"
+                        spellcheck="false"
+                        autofocus
+                        required
+                    >
+
+                    <button
+                        class="somente-leitor"
+                        type="submit"
+                    >
+                        Executar comando
+                    </button>
+                </form>
+            </div>
         </section>
     </main>
+
+    <footer
+        class="metricas"
+        aria-label="Estado atual da simulação"
+    >
+        <article class="metrica">
+            <span>USUÁRIOS</span>
+
+            <strong>
+                {{ estado.usuarios_afetados }}
+            </strong>
+
+            <p>AFETADOS NO MOMENTO</p>
+        </article>
+
+        <article class="metrica">
+            <span>TEMPO RESTANTE</span>
+
+            <strong
+                id="tempoRestante"
+                data-segundos="{{ estado.tempo_restante }}"
+                data-finalizado="{% if estado.finalizado %}true{% else %}false{% endif %}"
+            >
+                {{ estado.tempo_restante // 60 }} MIN
+            </strong>
+
+            <p>PARA CONTER O INCIDENTE</p>
+        </article>
+
+        <article class="metrica">
+            <span>DECISÕES</span>
+
+            <strong>
+                {{ estado.acoes_realizadas | length }}
+            </strong>
+
+            <p>EXECUTADAS</p>
+        </article>
+
+        <article class="metrica">
+            <span>PONTUAÇÃO</span>
+
+            <strong>
+                {{ estado.pontuacao }}
+            </strong>
+
+            <p>PONTOS ATUAIS</p>
+        </article>
+    </footer>
+
+    <script
+        src="{{ url_for('static', filename='js/game.js') }}"
+    ></script>
 </body>
 </html>
