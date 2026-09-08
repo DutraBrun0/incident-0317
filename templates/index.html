@@ -19,10 +19,7 @@
             <p>{{ incidente.descricao }}</p>
 
             <div>
-                <p>
-                    Pontuação:
-                    {{ estado.pontuacao }}
-                </p>
+                <p>Pontuação: {{ estado.pontuacao }}</p>
 
                 <p>
                     Usuários afetados:
@@ -30,88 +27,69 @@
                 </p>
 
                 <p>
-                    Decisões tomadas:
-                    {{ estado.acoes_realizadas | length }}
+                    Tempo restante:
+                    {{ estado.tempo_restante // 60 }} minutos
+                </p>
+
+                <p>Fase: {{ estado.fase }}</p>
+
+                <p>
+                    Pistas encontradas:
+                    {{ estado.pistas_encontradas | length }}
                 </p>
             </div>
         </section>
 
-        <section>
-            <h2>Logs do sistema</h2>
+        <section class="terminal">
+            <h2>Terminal de resposta</h2>
 
-            <ul>
+            <div class="terminal-saida">
                 {% for log in incidente.logs %}
-                    <li>{{ log }}</li>
+                    <p>[SISTEMA] {{ log }}</p>
                 {% endfor %}
-            </ul>
-        </section>
 
-        {% if estado.finalizado %}
-            <section>
-                <h2>
-                    {{ estado.resultado_final.titulo }}
-                </h2>
+                {% for item in estado.historico %}
+                    <div>
+                        <p>
+                            <strong>operador@0317:~$</strong>
+                            {{ item.comando }}
+                        </p>
 
-                <p>
-                    {{ estado.resultado_final.mensagem }}
-                </p>
+                        <p>
+                            [{{ item.titulo }}]
+                            {{ item.resposta }}
+                        </p>
+                    </div>
+                {% endfor %}
 
-                {% if estado.resultado_final.sucesso %}
-                    <p>Você resolveu o incidente!</p>
-                {% else %}
+                {% if estado.finalizado %}
                     <p>
-                        Você não conseguiu controlar o incidente.
+                        [SISTEMA] Partida encerrada.
+                        Digite "reiniciar" para jogar novamente.
                     </p>
                 {% endif %}
-            </section>
+            </div>
 
-        {% elif resultado %}
-            <section>
-                <h2>{{ resultado.titulo }}</h2>
-                <p>{{ resultado.mensagem }}</p>
-            </section>
-        {% endif %}
+            <form
+                action="{{ url_for('executar_comando') }}"
+                method="POST"
+            >
+                <label for="comando">
+                    operador@0317:~$
+                </label>
 
-        {% if not estado.finalizado %}
-            <section>
-                <h2>Qual é sua próxima ação?</h2>
-
-                <div class="acoes">
-                    {% for acao in incidente.acoes %}
-                        <form
-                            action="{{ url_for('escolher_acao') }}"
-                            method="POST"
-                        >
-                            <button
-                                type="submit"
-                                name="acao"
-                                value="{{ acao.id }}"
-                                {% if acao.id in estado.acoes_realizadas %}
-                                    disabled
-                                {% endif %}
-                            >
-                                <strong>
-                                    {{ acao.titulo }}
-                                </strong>
-
-                                <span>
-                                    {{ acao.descricao }}
-                                </span>
-                            </button>
-                        </form>
-                    {% endfor %}
-                </div>
-            </section>
-        {% endif %}
-
-        <form
-            action="{{ url_for('reiniciar') }}"
-            method="POST"
-        >
-            <button type="submit">
-                Reiniciar partida
-            </button>
-        </form>
+                <input
+                    type="text"
+                    id="comando"
+                    name="comando"
+                    placeholder='Digite "ajuda"'
+                    autocomplete="off"
+                    spellcheck="false"
+                    autofocus
+                    required
+                >
+            </form>
+        </section>
     </main>
 </body>
 </html>
