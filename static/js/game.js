@@ -17,8 +17,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const estadoSimulacao =
         document.querySelector(".estado-simulacao");
 
+    const cenarioId =
+        document.body.dataset.cenario || "padrao";
+
+    const prefixoHistorico =
+        "incident-simulator-historico-";
+
     const chaveHistorico =
-        "incident-0317-historico-comandos";
+        prefixoHistorico + cenarioId;
 
     const simulacaoFinalizada =
         tempoRestante?.dataset.finalizado === "true";
@@ -40,7 +46,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 return historico;
             }
         } catch (erro) {
-            console.log("Histórico não encontrado.");
+            console.log(
+                "Não foi possível carregar o histórico."
+            );
         }
 
         return [];
@@ -52,6 +60,19 @@ document.addEventListener("DOMContentLoaded", function () {
             chaveHistorico,
             JSON.stringify(historicoComandos)
         );
+    }
+
+
+    function limparHistoricosDoJogo() {
+        const chaves = Object.keys(
+            sessionStorage
+        );
+
+        chaves.forEach(function (chave) {
+            if (chave.startsWith(prefixoHistorico)) {
+                sessionStorage.removeItem(chave);
+            }
+        });
     }
 
 
@@ -87,7 +108,8 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        const tamanho = campoComando.value.length;
+        const tamanho =
+            campoComando.value.length;
 
         campoComando.setSelectionRange(
             tamanho,
@@ -105,7 +127,8 @@ document.addEventListener("DOMContentLoaded", function () {
             posicaoHistorico
             === historicoComandos.length
         ) {
-            campoComando.value = comandoAtual;
+            campoComando.value =
+                comandoAtual;
         } else {
             campoComando.value =
                 historicoComandos[posicaoHistorico];
@@ -136,7 +159,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const segundosIniciais =
-            Number(tempoRestante.dataset.segundos);
+            Number(
+                tempoRestante.dataset.segundos
+            );
 
         if (!Number.isFinite(segundosIniciais)) {
             return;
@@ -152,14 +177,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const inicio = Date.now();
 
         function atualizarContador() {
-            const segundosPassados = Math.floor(
-                (Date.now() - inicio) / 1000
-            );
+            const segundosPassados =
+                Math.floor(
+                    (Date.now() - inicio) / 1000
+                );
 
-            const segundosAtuais = Math.max(
-                0,
-                segundosIniciais - segundosPassados
-            );
+            const segundosAtuais =
+                Math.max(
+                    0,
+                    segundosIniciais
+                    - segundosPassados
+                );
 
             tempoRestante.textContent =
                 formatarTempo(segundosAtuais);
@@ -167,11 +195,12 @@ document.addEventListener("DOMContentLoaded", function () {
             return segundosAtuais;
         }
 
-        const intervalo = setInterval(function () {
-            if (atualizarContador() === 0) {
-                clearInterval(intervalo);
-            }
-        }, 1000);
+        const intervalo =
+            setInterval(function () {
+                if (atualizarContador() === 0) {
+                    clearInterval(intervalo);
+                }
+            }, 1000);
     }
 
 
@@ -220,7 +249,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (evento.key === "ArrowUp") {
                     evento.preventDefault();
 
-                    if (historicoComandos.length === 0) {
+                    if (
+                        historicoComandos.length === 0
+                    ) {
                         return;
                     }
 
@@ -270,12 +301,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (
                     simulacaoFinalizada
-                    && !comandoReiniciaPartida(comando)
+                    && !comandoReiniciaPartida(
+                        comando
+                    )
                 ) {
                     evento.preventDefault();
 
                     campoComando.setCustomValidity(
-                        'A simulação terminou. Digite "reiniciar".'
+                        "A simulação terminou. "
+                        + 'Digite "reiniciar".'
                     );
 
                     campoComando.reportValidity();
@@ -284,11 +318,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
 
-                if (comandoReiniciaPartida(comando)) {
-                    sessionStorage.removeItem(
-                        chaveHistorico
-                    );
-
+                if (
+                    comandoReiniciaPartida(comando)
+                ) {
+                    limparHistoricosDoJogo();
                     return;
                 }
 
@@ -298,7 +331,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     ];
 
                 if (ultimoComando !== comando) {
-                    historicoComandos.push(comando);
+                    historicoComandos.push(
+                        comando
+                    );
                 }
 
                 historicoComandos =
@@ -318,7 +353,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     window.getSelection();
 
                 const textoSelecionado =
-                    selecao ? selecao.toString() : "";
+                    selecao
+                        ? selecao.toString()
+                        : "";
 
                 if (!textoSelecionado) {
                     campoComando.focus();

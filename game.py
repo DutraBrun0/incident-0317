@@ -1,661 +1,120 @@
-INCIDENTE_INICIAL = {
-    "horario": "03:17",
-    "titulo": "Falha crítica na API",
-    "descricao": "A API parou de responder após uma nova atualização.",
-    "nivel": "CRÍTICO",
-    "usuarios_afetados": 1248,
+import random
+import unicodedata
 
-    "logs": [
-        "03:16:43 - Taxa de erros acima de 80%",
-        "03:16:52 - Banco de dados sem resposta",
-        "03:17:05 - Timeouts detectados na API",
-        "03:17:15 - 1.248 usuários afetados",
-    ],
-
-    "acoes": [
-        {
-            "id": "verificar_logs",
-            "titulo": "Verificar logs",
-            "descricao": "Investigar os registros mais recentes.",
-        },
-        {
-            "id": "reiniciar_servidor",
-            "titulo": "Reiniciar servidor",
-            "descricao": "Tentar restaurar o serviço imediatamente.",
-        },
-        {
-            "id": "fazer_rollback",
-            "titulo": "Fazer rollback",
-            "descricao": "Voltar para a versão anterior do sistema.",
-        },
-        {
-            "id": "analisar_banco",
-            "titulo": "Analisar banco",
-            "descricao": "Verificar conexões e consultas travadas.",
-        },
-    ],
-}
+from incidentes import (
+    CENARIOS,
+    CENARIO_PADRAO,
+    obter_cenario,
+    listar_cenarios,
+)
 
 
-RESULTADOS_ACOES = {
-    "verificar_logs": {
-        "comando": "logs",
-        "titulo": "Logs analisados",
-        "mensagem": (
-            "Os erros começaram logo após a última atualização. "
-            "O número de conexões aumentou rapidamente."
-        ),
-        "pontos": 15,
-        "usuarios_adicionados": 40,
-        "tempo_gasto": 30,
-        "requisitos": [],
-        "pista": "erro_apos_deploy",
-        "pista_texto": (
-            "Os erros começaram depois do último deploy."
-        ),
-    },
+def normalizar_texto(texto):
+    texto_sem_acentos = "".join(
+        caractere
+        for caractere in unicodedata.normalize(
+            "NFD",
+            texto
+        )
+        if unicodedata.category(caractere) != "Mn"
+    )
 
-    "reiniciar_servidor": {
-        "comando": "reiniciar servidor",
-        "titulo": "Reinicialização malsucedida",
-        "mensagem": (
-            "O servidor voltou por alguns segundos, "
-            "mas caiu novamente."
-        ),
-        "pontos": -25,
-        "usuarios_adicionados": 420,
-        "tempo_gasto": 60,
-        "requisitos": [],
-        "pista": None,
-        "pista_texto": None,
-    },
-
-    "analisar_banco": {
-        "comando": "analisar banco",
-        "titulo": "Banco analisado",
-        "mensagem": (
-            "O pool de conexões está completamente esgotado."
-        ),
-        "pontos": 20,
-        "usuarios_adicionados": 30,
-        "tempo_gasto": 45,
-        "requisitos": [
-            "erro_apos_deploy",
-        ],
-        "pista": "pool_esgotado",
-        "pista_texto": (
-            "A aplicação não está encerrando as conexões."
-        ),
-    },
-
-    "fazer_rollback": {
-        "comando": "rollback",
-        "titulo": "Rollback iniciado",
-        "mensagem": (
-            "A versão anterior está sendo restaurada."
-        ),
-        "pontos": 30,
-        "usuarios_adicionados": 0,
-        "tempo_gasto": 60,
-        "requisitos": [],
-        "pista": None,
-        "pista_texto": None,
-    },
-
-    "analisar_metricas": {
-        "comando": "metricas",
-        "titulo": "Métricas analisadas",
-        "mensagem": (
-            "A quantidade de conexões cresceu junto com "
-            "a taxa de erros da API."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": 50,
-        "tempo_gasto": 30,
-        "requisitos": [],
-        "pista": "pico_de_conexoes",
-        "pista_texto": (
-            "Existe um pico anormal de conexões."
-        ),
-    },
-
-    "verificar_filas": {
-        "comando": "verificar filas",
-        "titulo": "Filas verificadas",
-        "mensagem": (
-            "As filas estão processando normalmente. "
-            "Elas provavelmente não causaram o incidente."
-        ),
-        "pontos": 5,
-        "usuarios_adicionados": 40,
-        "tempo_gasto": 25,
-        "requisitos": [],
-        "pista": "filas_normais",
-        "pista_texto": (
-            "O sistema de filas está funcionando normalmente."
-        ),
-    },
-
-    "verificar_servicos_externos": {
-        "comando": "verificar externos",
-        "titulo": "Serviços externos verificados",
-        "mensagem": (
-            "Os serviços externos estão operacionais. "
-            "A falha parece estar dentro da própria aplicação."
-        ),
-        "pontos": 5,
-        "usuarios_adicionados": 45,
-        "tempo_gasto": 30,
-        "requisitos": [],
-        "pista": "externos_operacionais",
-        "pista_texto": (
-            "Nenhum serviço externo apresentou falhas."
-        ),
-    },
-
-    "verificar_cache": {
-        "comando": "verificar cache",
-        "titulo": "Cache verificado",
-        "mensagem": (
-            "O cache está respondendo normalmente e não "
-            "apresenta aumento significativo de memória."
-        ),
-        "pontos": 5,
-        "usuarios_adicionados": 35,
-        "tempo_gasto": 25,
-        "requisitos": [],
-        "pista": "cache_operacional",
-        "pista_texto": (
-            "O cache não é a origem do incidente."
-        ),
-    },
-
-    "analisar_deploy": {
-        "comando": "analisar deploy",
-        "titulo": "Deploy analisado",
-        "mensagem": (
-            "Uma nova versão foi publicada sete minutos "
-            "antes do início dos erros."
-        ),
-        "pontos": 15,
-        "usuarios_adicionados": 30,
-        "tempo_gasto": 40,
-        "requisitos": [
-            "erro_apos_deploy",
-        ],
-        "pista": "deploy_suspeito",
-        "pista_texto": (
-            "O último deploy provavelmente iniciou o incidente."
-        ),
-    },
-
-    "comparar_versoes": {
-        "comando": "comparar versoes",
-        "titulo": "Versões comparadas",
-        "mensagem": (
-            "A nova versão alterou a função responsável "
-            "por abrir conexões com o banco."
-        ),
-        "pontos": 20,
-        "usuarios_adicionados": 25,
-        "tempo_gasto": 45,
-        "requisitos": [
-            "deploy_suspeito",
-        ],
-        "pista": "mudanca_nas_conexoes",
-        "pista_texto": (
-            "A nova versão modificou o controle das conexões."
-        ),
-    },
-
-    "rastrear_requisicao": {
-        "comando": "rastrear requisicao",
-        "titulo": "Requisição rastreada",
-        "mensagem": (
-            "As requisições ficam travadas esperando uma "
-            "conexão disponível com o banco."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": 30,
-        "tempo_gasto": 40,
-        "requisitos": [
-            "pico_de_conexoes",
-        ],
-        "pista": "requisicoes_aguardando",
-        "pista_texto": (
-            "As requisições estão paradas aguardando o banco."
-        ),
-    },
-
-    "procurar_consultas_lentas": {
-        "comando": "consultas lentas",
-        "titulo": "Consultas analisadas",
-        "mensagem": (
-            "Nenhuma consulta lenta foi encontrada. "
-            "O problema está na quantidade de conexões abertas."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": 35,
-        "tempo_gasto": 35,
-        "requisitos": [
-            "pool_esgotado",
-        ],
-        "pista": "sem_consultas_lentas",
-        "pista_texto": (
-            "Consultas lentas não causaram o incidente."
-        ),
-    },
-
-    "inspecionar_conexoes": {
-        "comando": "inspecionar conexoes",
-        "titulo": "Conexões inspecionadas",
-        "mensagem": (
-            "Diversas conexões permanecem abertas mesmo "
-            "depois que as requisições terminam."
-        ),
-        "pontos": 25,
-        "usuarios_adicionados": 20,
-        "tempo_gasto": 45,
-        "requisitos": [
-            "pool_esgotado",
-            "mudanca_nas_conexoes",
-        ],
-        "pista": "vazamento_confirmado",
-        "pista_texto": (
-            "Foi confirmado um vazamento de conexões."
-        ),
-    },
-
-    "limitar_trafego": {
-        "comando": "limitar trafego",
-        "titulo": "Tráfego limitado",
-        "mensagem": (
-            "Novas requisições foram temporariamente limitadas. "
-            "A pressão sobre a API diminuiu."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": -250,
-        "tempo_gasto": 30,
-        "requisitos": [
-            "pico_de_conexoes",
-        ],
-        "pista": "trafego_limitado",
-        "pista_texto": (
-            "A entrada de novas requisições foi controlada."
-        ),
-    },
-
-    "ativar_manutencao": {
-        "comando": "ativar manutencao",
-        "titulo": "Modo de manutenção ativado",
-        "mensagem": (
-            "O acesso de novos usuários foi interrompido. "
-            "A pressão sobre a API diminuiu."
-        ),
-        "pontos": 15,
-        "usuarios_adicionados": -400,
-        "tempo_gasto": 20,
-        "requisitos": [
-            "pico_de_conexoes",
-        ],
-        "pista": "modo_manutencao",
-        "pista_texto": (
-            "O sistema está isolado de novas requisições."
-        ),
-    },
-
-    "desativar_feature": {
-        "comando": "desativar feature",
-        "titulo": "Funcionalidade desativada",
-        "mensagem": (
-            "A funcionalidade publicada no último deploy "
-            "foi temporariamente desativada."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": -120,
-        "tempo_gasto": 30,
-        "requisitos": [
-            "deploy_suspeito",
-        ],
-        "pista": "feature_desativada",
-        "pista_texto": (
-            "A funcionalidade suspeita não recebe mais tráfego."
-        ),
-    },
-
-    "encerrar_conexoes": {
-        "comando": "encerrar conexoes",
-        "titulo": "Conexões encerradas",
-        "mensagem": (
-            "As conexões presas foram encerradas. "
-            "O banco voltou a responder temporariamente."
-        ),
-        "pontos": 15,
-        "usuarios_adicionados": -300,
-        "tempo_gasto": 35,
-        "requisitos": [
-            "pool_esgotado",
-        ],
-        "pista": "conexoes_encerradas",
-        "pista_texto": (
-            "O banco foi aliviado, mas a causa ainda existe."
-        ),
-    },
-
-    "aumentar_instancias": {
-        "comando": "aumentar instancias",
-        "titulo": "Novas instâncias iniciadas",
-        "mensagem": (
-            "As novas instâncias também abriram conexões. "
-            "A sobrecarga do banco ficou ainda pior."
-        ),
-        "pontos": -20,
-        "usuarios_adicionados": 250,
-        "tempo_gasto": 40,
-        "requisitos": [
-            "pico_de_conexoes",
-        ],
-        "pista": None,
-        "pista_texto": None,
-    },
-
-    "bloquear_endpoint": {
-        "comando": "bloquear endpoint",
-        "titulo": "Endpoint bloqueado",
-        "mensagem": (
-            "A rota com maior quantidade de requisições "
-            "foi temporariamente bloqueada."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": -180,
-        "tempo_gasto": 30,
-        "requisitos": [
-            "requisicoes_aguardando",
-        ],
-        "pista": "endpoint_isolado",
-        "pista_texto": (
-            "A rota problemática não recebe novas requisições."
-        ),
-    },
-
-    "pausar_filas": {
-        "comando": "pausar filas",
-        "titulo": "Filas pausadas",
-        "mensagem": (
-            "As filas não eram a causa do incidente. "
-            "Agora diversas tarefas deixaram de ser processadas."
-        ),
-        "pontos": -15,
-        "usuarios_adicionados": 150,
-        "tempo_gasto": 35,
-        "requisitos": [],
-        "pista": None,
-        "pista_texto": None,
-    },
-
-    "reiniciar_banco": {
-        "comando": "reiniciar banco",
-        "titulo": "Falha crítica durante a reinicialização",
-        "mensagem": (
-            "O banco foi reiniciado enquanto existiam operações "
-            "ativas. O sistema perdeu acesso aos dados e o "
-            "incidente saiu de controle."
-        ),
-        "pontos": -50,
-        "usuarios_adicionados": 800,
-        "tempo_gasto": 90,
-        "requisitos": [
-            "pool_esgotado",
-        ],
-        "pista": None,
-        "pista_texto": None,
-        "finalizado": True,
-        "sucesso": False,
-    },
-
-    "acionar_dba": {
-        "comando": "acionar dba",
-        "titulo": "DBA acionado",
-        "mensagem": (
-            "O especialista em banco entrou no incidente e começou "
-            "a avaliar a réplica e as conexões ativas."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": 40,
-        "tempo_gasto": 60,
-        "requisitos": [
-            "pool_esgotado",
-        ],
-        "pista": "dba_acionado",
-        "pista_texto": (
-            "O DBA confirmou que o banco principal está saudável, "
-            "mas sobrecarregado pelas conexões da aplicação."
-        ),
-    },
-
-    "verificar_replica": {
-        "comando": "verificar replica",
-        "titulo": "Réplica verificada",
-        "mensagem": (
-            "A réplica está sincronizada e pronta para receber tráfego."
-        ),
-        "pontos": 15,
-        "usuarios_adicionados": 30,
-        "tempo_gasto": 45,
-        "requisitos": [
-            "dba_acionado",
-        ],
-        "pista": "replica_saudavel",
-        "pista_texto": (
-            "Existe uma réplica saudável disponível para failover."
-        ),
-    },
-
-    "failover_banco": {
-        "comando": "failover banco",
-        "titulo": "Alívio temporário",
-        "mensagem": (
-            "O tráfego foi enviado para a réplica, mas a aplicação "
-            "continuou abrindo conexões sem encerrá-las. O incidente "
-            "voltará a acontecer porque a causa não foi corrigida."
-        ),
-        "pontos": 5,
-        "usuarios_adicionados": -350,
-        "tempo_gasto": 60,
-        "requisitos": [
-            "replica_saudavel",
-        ],
-        "pista": None,
-        "pista_texto": None,
-        "finalizado": True,
-        "sucesso": False,
-    },
-
-    "restaurar_backup": {
-        "comando": "restaurar backup",
-        "titulo": "Restauração desnecessária",
-        "mensagem": (
-            "O banco não estava corrompido. A restauração substituiu "
-            "dados recentes e ampliou o impacto do incidente."
-        ),
-        "pontos": -40,
-        "usuarios_adicionados": 700,
-        "tempo_gasto": 120,
-        "requisitos": [
-            "pool_esgotado",
-        ],
-        "pista": None,
-        "pista_texto": None,
-        "finalizado": True,
-        "sucesso": False,
-    },
-
-    "preparar_hotfix": {
-        "comando": "preparar hotfix",
-        "titulo": "Hotfix preparado",
-        "mensagem": (
-            "A função foi alterada para sempre encerrar a conexão "
-            "depois de cada requisição."
-        ),
-        "pontos": 20,
-        "usuarios_adicionados": 80,
-        "tempo_gasto": 90,
-        "requisitos": [
-            "vazamento_confirmado",
-        ],
-        "pista": "hotfix_preparado",
-        "pista_texto": (
-            "Existe uma correção pronta para ser testada."
-        ),
-    },
-
-    "testar_hotfix": {
-        "comando": "testar hotfix",
-        "titulo": "Hotfix validado",
-        "mensagem": (
-            "Os testes confirmaram que as conexões agora são "
-            "encerradas corretamente."
-        ),
-        "pontos": 20,
-        "usuarios_adicionados": 30,
-        "tempo_gasto": 60,
-        "requisitos": [
-            "hotfix_preparado",
-        ],
-        "pista": "hotfix_validado",
-        "pista_texto": (
-            "A correção passou nos testes de conexão."
-        ),
-    },
-
-    "aplicar_hotfix": {
-        "comando": "aplicar hotfix",
-        "titulo": "Hotfix aplicado",
-        "mensagem": (
-            "A versão corrigida foi publicada. Novas requisições "
-            "não deixam conexões abertas."
-        ),
-        "pontos": 30,
-        "usuarios_adicionados": -400,
-        "tempo_gasto": 60,
-        "requisitos": [
-            "hotfix_validado",
-        ],
-        "pista": "correcao_aplicada",
-        "pista_texto": (
-            "A causa do vazamento foi corrigida em produção."
-        ),
-    },
-
-    "reiniciar_api_controlado": {
-        "comando": "reiniciar api controlado",
-        "titulo": "API reiniciada com segurança",
-        "mensagem": (
-            "As instâncias antigas foram substituídas gradualmente "
-            "sem interromper todas as requisições."
-        ),
-        "pontos": 20,
-        "usuarios_adicionados": -500,
-        "tempo_gasto": 45,
-        "requisitos": [
-            "correcao_aplicada",
-            "conexoes_encerradas",
-        ],
-        "pista": "api_estavel",
-        "pista_texto": (
-            "A API voltou a responder sem criar novas conexões presas."
-        ),
-    },
-
-    "restaurar_feature": {
-        "comando": "restaurar feature",
-        "titulo": "Funcionalidade restaurada",
-        "mensagem": (
-            "A funcionalidade foi reativada utilizando a versão corrigida."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": 20,
-        "tempo_gasto": 20,
-        "requisitos": [
-            "api_estavel",
-            "feature_desativada",
-        ],
-        "pista": "feature_restaurada",
-        "pista_texto": (
-            "A funcionalidade voltou a operar normalmente."
-        ),
-    },
-
-    "reabrir_trafego": {
-        "comando": "reabrir trafego",
-        "titulo": "Tráfego restaurado",
-        "mensagem": (
-            "O tráfego normal foi restaurado gradualmente. "
-            "A API continua estável."
-        ),
-        "pontos": 10,
-        "usuarios_adicionados": 50,
-        "tempo_gasto": 30,
-        "requisitos": [
-            "api_estavel",
-        ],
-        "pista": "trafego_reaberto",
-        "pista_texto": (
-            "Os usuários voltaram a acessar o sistema normalmente."
-        ),
-    },
-
-    "validar_recuperacao": {
-        "comando": "validar recuperacao",
-        "titulo": "Recuperação validada",
-        "mensagem": (
-            "O estado final do sistema está sendo avaliado."
-        ),
-        "pontos": 0,
-        "usuarios_adicionados": 0,
-        "tempo_gasto": 15,
-        "requisitos": [
-            "trafego_reaberto",
-        ],
-        "pista": None,
-        "pista_texto": None,
-    },
-}
+    return " ".join(
+        texto_sem_acentos.lower().strip().split()
+    )
 
 
-RESULTADO_VITORIA = {
-    "titulo": "Incidente resolvido",
-    "mensagem": (
-        "As pistas confirmaram que a nova versão estava mantendo "
-        "conexões abertas com o banco. O rollback restaurou o sistema."
-    ),
-    "pontos": 30,
-    "usuarios_adicionados": 0,
-    "finalizado": True,
-    "sucesso": True,
-}
+def obter_id_cenario(estado=None, cenario_id=None):
+    if cenario_id in CENARIOS:
+        return cenario_id
+
+    if estado:
+        id_estado = estado.get("cenario_id")
+
+        if id_estado in CENARIOS:
+            return id_estado
+
+    return CENARIO_PADRAO
 
 
-RESULTADO_DERROTA = {
-    "titulo": "O incidente saiu de controle",
-    "mensagem": (
-        "O rollback foi realizado sem informações suficientes. "
-        "A operação falhou e o banco de dados ficou ainda mais "
-        "sobrecarregado."
-    ),
-    "pontos": -30,
-    "usuarios_adicionados": 600,
-    "finalizado": True,
-    "sucesso": False,
-}
+def obter_cenario_do_estado(estado):
+    cenario_id = obter_id_cenario(estado=estado)
+
+    return obter_cenario(cenario_id)
 
 
-def obter_incidente_inicial():
-    return INCIDENTE_INICIAL
+def obter_incidente_inicial(cenario_id=None):
+    cenario_id = obter_id_cenario(
+        cenario_id=cenario_id
+    )
+
+    cenario = obter_cenario(cenario_id)
+
+    acoes_resumidas = []
+
+    for acao_id, acao in cenario["acoes"].items():
+        acoes_resumidas.append({
+            "id": acao_id,
+            "titulo": acao["titulo"],
+            "descricao": acao["mensagem"],
+        })
+
+    return {
+        "id": cenario["id"],
+        "codigo": cenario["codigo"],
+        "horario": cenario["horario"],
+        "titulo": cenario["titulo"],
+        "descricao": cenario["descricao"],
+        "nivel": cenario["nivel"],
+        "usuarios_afetados": (
+            cenario["usuarios_afetados"]
+        ),
+        "logs": list(cenario["logs"]),
+        "acoes": acoes_resumidas,
+    }
 
 
-def executar_acao(acao_id):
-    return RESULTADOS_ACOES.get(
+def obter_incidentes_disponiveis():
+    incidentes = []
+
+    for cenario in listar_cenarios():
+        incidentes.append({
+            "id": cenario["id"],
+            "codigo": cenario["codigo"],
+            "horario": cenario["horario"],
+            "titulo": cenario["titulo"],
+            "descricao": cenario["descricao"],
+            "nivel": cenario["nivel"],
+        })
+
+    return incidentes
+
+
+def sortear_incidente(cenario_anterior=None):
+    ids_cenarios = list(CENARIOS.keys())
+
+    if (
+        cenario_anterior in ids_cenarios
+        and len(ids_cenarios) > 1
+    ):
+        ids_cenarios.remove(cenario_anterior)
+
+    return random.choice(ids_cenarios)
+
+
+def obter_acoes_do_estado(estado):
+    cenario = obter_cenario_do_estado(estado)
+
+    return cenario["acoes"]
+
+
+def executar_acao(acao_id, estado=None):
+    if estado is None:
+        cenario = obter_cenario(CENARIO_PADRAO)
+    else:
+        cenario = obter_cenario_do_estado(estado)
+
+    return cenario["acoes"].get(
         acao_id,
         {
             "titulo": "Ação inválida",
@@ -673,13 +132,14 @@ def obter_comandos_disponiveis(estado):
         return []
 
     comandos_disponiveis = []
+    acoes = obter_acoes_do_estado(estado)
 
     pistas_encontradas = set(
         estado["pistas_encontradas"]
     )
 
-    for id_acao, acao in RESULTADOS_ACOES.items():
-        if id_acao in estado["acoes_realizadas"]:
+    for acao_id, acao in acoes.items():
+        if acao_id in estado["acoes_realizadas"]:
             continue
 
         requisitos = set(
@@ -695,12 +155,14 @@ def obter_comandos_disponiveis(estado):
 
 
 def criar_resultado_rollback(estado):
+    cenario = obter_cenario_do_estado(estado)
+
     pistas = set(
         estado["pistas_encontradas"]
     )
 
     if "vazamento_confirmado" not in pistas:
-        return RESULTADO_DERROTA.copy()
+        return cenario["resultado_derrota"].copy()
 
     houve_contencao = bool(
         {
@@ -731,7 +193,9 @@ def criar_resultado_rollback(estado):
 
     if houve_contencao:
         return {
-            "titulo": "Incidente resolvido com contenção",
+            "titulo": (
+                "Incidente resolvido com contenção"
+            ),
             "mensagem": (
                 "A versão anterior foi restaurada e a "
                 "contenção evitou um impacto maior. Algumas "
@@ -743,7 +207,7 @@ def criar_resultado_rollback(estado):
             "sucesso": True,
         }
 
-    return RESULTADO_VITORIA.copy()
+    return cenario["resultado_vitoria"].copy()
 
 
 def criar_resultado_validacao(estado):
@@ -798,10 +262,10 @@ def criar_resultado_validacao(estado):
     }
 
 
-def aplicar_consequencias_da_ordem(
+def aplicar_consequencias_api(
     acao_id,
     estado,
-    resultado
+    resultado,
 ):
     resultado_ajustado = resultado.copy()
 
@@ -840,7 +304,9 @@ def aplicar_consequencias_da_ordem(
 
         elif not houve_contencao:
             resultado_ajustado.update({
-                "titulo": "Reinicialização sem contenção",
+                "titulo": (
+                    "Reinicialização sem contenção"
+                ),
                 "mensagem": (
                     "O servidor voltou a receber todo o "
                     "tráfego imediatamente. A reinicialização "
@@ -853,7 +319,9 @@ def aplicar_consequencias_da_ordem(
 
         else:
             resultado_ajustado.update({
-                "titulo": "Reinicialização controlada",
+                "titulo": (
+                    "Reinicialização controlada"
+                ),
                 "mensagem": (
                     "Como o tráfego estava contido, a "
                     "reinicialização reduziu temporariamente "
@@ -867,10 +335,13 @@ def aplicar_consequencias_da_ordem(
 
     elif (
         acao_id == "encerrar_conexoes"
-        and "inspecionar_conexoes" not in conjunto_acoes
+        and "inspecionar_conexoes"
+        not in conjunto_acoes
     ):
         resultado_ajustado.update({
-            "titulo": "Conexões encerradas sem confirmação",
+            "titulo": (
+                "Conexões encerradas sem confirmação"
+            ),
             "mensagem": (
                 "As conexões foram encerradas antes de serem "
                 "inspecionadas. Algumas requisições ativas "
@@ -884,7 +355,8 @@ def aplicar_consequencias_da_ordem(
 
     elif (
         acao_id == "aumentar_instancias"
-        and "analisar_banco" not in conjunto_acoes
+        and "analisar_banco"
+        not in conjunto_acoes
     ):
         resultado_ajustado.update({
             "titulo": "Escalonamento precipitado",
@@ -900,10 +372,13 @@ def aplicar_consequencias_da_ordem(
 
     elif (
         acao_id == "pausar_filas"
-        and "verificar_filas" not in conjunto_acoes
+        and "verificar_filas"
+        not in conjunto_acoes
     ):
         resultado_ajustado.update({
-            "titulo": "Filas pausadas sem investigação",
+            "titulo": (
+                "Filas pausadas sem investigação"
+            ),
             "mensagem": (
                 "As filas foram pausadas sem qualquer "
                 "evidência de falha. Tarefas importantes "
@@ -950,14 +425,251 @@ def aplicar_consequencias_da_ordem(
     return resultado_ajustado
 
 
+def aplicar_consequencias_ddos(
+    acao_id,
+    estado,
+    resultado,
+):
+    resultado_ajustado = resultado.copy()
+
+    acoes_realizadas = estado["acoes_realizadas"]
+    conjunto_acoes = set(acoes_realizadas)
+
+    ultima_acao = (
+        acoes_realizadas[-1]
+        if acoes_realizadas
+        else None
+    )
+
+    houve_mitigacao = bool(
+        {
+            "ativar_rate_limit",
+            "aplicar_regra_waf",
+            "ativar_scrubbing",
+        }
+        & conjunto_acoes
+    )
+
+    if acao_id == "reiniciar_gateway":
+        if "analisar_trafego" not in conjunto_acoes:
+            resultado_ajustado.update({
+                "titulo": (
+                    "Gateway reiniciado às cegas"
+                ),
+                "mensagem": (
+                    "O gateway foi reiniciado antes que o "
+                    "tráfego fosse analisado. O ataque "
+                    "continuou e a nova instância ficou "
+                    "sobrecarregada imediatamente."
+                ),
+                "pontos": -40,
+                "usuarios_adicionados": 700,
+                "tempo_extra": 30,
+            })
+
+        elif not houve_mitigacao:
+            resultado_ajustado.update({
+                "titulo": (
+                    "Reinicialização sem mitigação"
+                ),
+                "mensagem": (
+                    "O gateway voltou a operar sem qualquer "
+                    "filtro de tráfego. Os bots retomaram "
+                    "a sobrecarga em poucos segundos."
+                ),
+                "pontos": -25,
+                "usuarios_adicionados": 450,
+                "tempo_extra": 15,
+            })
+
+        else:
+            resultado_ajustado.update({
+                "titulo": (
+                    "Gateway reiniciado com proteção"
+                ),
+                "mensagem": (
+                    "As proteções reduziram o tráfego durante "
+                    "a reinicialização. O gateway voltou sem "
+                    "receber toda a carga maliciosa."
+                ),
+                "pontos": 10,
+                "usuarios_adicionados": -150,
+                "tempo_extra": 0,
+            })
+
+    elif (
+        acao_id == "bloquear_paises"
+        and "assinatura_bot"
+        not in estado["pistas_encontradas"]
+    ):
+        resultado_ajustado.update({
+            "titulo": "Bloqueio geográfico impreciso",
+            "mensagem": (
+                "Regiões foram bloqueadas sem que a assinatura "
+                "dos bots fosse analisada. Muitos usuários "
+                "legítimos perderam acesso ao serviço."
+            ),
+            "pontos": -35,
+            "usuarios_adicionados": 550,
+            "tempo_extra": 15,
+        })
+
+    elif acao_id == "aumentar_instancias_ddos":
+        if not houve_mitigacao:
+            resultado_ajustado.update({
+                "titulo": (
+                    "Escalonamento sem proteção"
+                ),
+                "mensagem": (
+                    "As novas instâncias receberam o mesmo "
+                    "tráfego malicioso. A capacidade extra "
+                    "apenas atrasou a sobrecarga."
+                ),
+                "pontos": -10,
+                "usuarios_adicionados": 250,
+                "tempo_extra": 10,
+            })
+
+    elif (
+        acao_id == "analisar_logs_acesso"
+        and ultima_acao == "analisar_trafego"
+    ):
+        resultado_ajustado["pontos"] += 5
+
+        resultado_ajustado["mensagem"] += (
+            " A investigação seguiu uma sequência eficiente."
+        )
+
+    elif (
+        acao_id == "analisar_user_agents"
+        and ultima_acao == "analisar_logs_acesso"
+    ):
+        resultado_ajustado["pontos"] += 5
+
+        resultado_ajustado["mensagem"] += (
+            " A assinatura foi localizada rapidamente."
+        )
+
+    elif (
+        acao_id == "identificar_endpoint"
+        and ultima_acao in {
+            "analisar_logs_acesso",
+            "analisar_user_agents",
+        }
+    ):
+        resultado_ajustado["pontos"] += 10
+
+        resultado_ajustado["mensagem"] += (
+            " O alvo foi identificado no momento correto."
+        )
+
+    elif (
+        acao_id == "ativar_rate_limit"
+        and ultima_acao == "identificar_endpoint"
+    ):
+        resultado_ajustado["pontos"] += 5
+
+        resultado_ajustado["mensagem"] += (
+            " A contenção foi aplicada diretamente no alvo."
+        )
+
+    elif (
+        acao_id == "aplicar_regra_waf"
+        and ultima_acao == "criar_regra_waf"
+    ):
+        resultado_ajustado["pontos"] += 5
+
+        resultado_ajustado["mensagem"] += (
+            " A regra foi aplicada sem demora."
+        )
+
+    elif (
+        acao_id == "acionar_provedor"
+        and ultima_acao == "listar_origens"
+    ):
+        resultado_ajustado["pontos"] += 5
+
+        resultado_ajustado["mensagem"] += (
+            " O provedor recebeu as evidências necessárias."
+        )
+
+    elif (
+        acao_id == "validar_taxa_erros"
+        and ultima_acao in {
+            "aplicar_regra_waf",
+            "ativar_rate_limit",
+        }
+    ):
+        resultado_ajustado["pontos"] += 10
+
+        resultado_ajustado["mensagem"] += (
+            " A validação foi realizada logo após a mitigação."
+        )
+
+    return resultado_ajustado
+
+
+def aplicar_consequencias_da_ordem(
+    acao_id,
+    estado,
+    resultado,
+):
+    cenario_id = obter_id_cenario(
+        estado=estado
+    )
+
+    if cenario_id == "api_0317":
+        return aplicar_consequencias_api(
+            acao_id,
+            estado,
+            resultado,
+        )
+
+    if cenario_id == "ddos_0241":
+        return aplicar_consequencias_ddos(
+            acao_id,
+            estado,
+            resultado,
+        )
+
+    return resultado.copy()
+
+
+def atualizar_fase(estado):
+    if estado["finalizado"]:
+        estado["fase"] = "encerrado"
+        return
+
+    cenario = obter_cenario_do_estado(estado)
+
+    pistas_encontradas = set(
+        estado["pistas_encontradas"]
+    )
+
+    estado["fase"] = "investigacao"
+
+    for regra in cenario.get("regras_fase", []):
+        pistas_da_regra = set(
+            regra.get("pistas", [])
+        )
+
+        if pistas_da_regra & pistas_encontradas:
+            estado["fase"] = regra["fase"]
+            return
+
+
 def processar_acao(acao_id, estado):
     if estado["finalizado"]:
         return estado["resultado_final"], estado
 
-    if acao_id not in RESULTADOS_ACOES:
+    acoes = obter_acoes_do_estado(estado)
+
+    if acao_id not in acoes:
         resultado = {
             "titulo": "Comando inválido",
-            "mensagem": "Essa ação não existe.",
+            "mensagem": (
+                "Essa ação não existe neste incidente."
+            ),
         }
 
         return resultado, estado
@@ -972,7 +684,7 @@ def processar_acao(acao_id, estado):
 
         return resultado, estado
 
-    acao = RESULTADOS_ACOES[acao_id]
+    acao = acoes[acao_id]
 
     pistas_encontradas = set(
         estado["pistas_encontradas"]
@@ -983,11 +695,18 @@ def processar_acao(acao_id, estado):
     )
 
     if not requisitos.issubset(pistas_encontradas):
+        pistas_faltando = sorted(
+            requisitos - pistas_encontradas
+        )
+
         resultado = {
             "titulo": "Comando bloqueado",
             "mensagem": (
                 "Você ainda não encontrou as pistas "
-                "necessárias para executar essa ação."
+                "necessárias para executar essa ação. "
+                "Pistas pendentes: "
+                + ", ".join(pistas_faltando)
+                + "."
             ),
         }
 
@@ -997,11 +716,25 @@ def processar_acao(acao_id, estado):
         obter_comandos_disponiveis(estado)
     )
 
-    if acao_id == "fazer_rollback":
-        resultado = criar_resultado_rollback(estado)
+    cenario_id = obter_id_cenario(
+        estado=estado
+    )
 
-    elif acao_id == "validar_recuperacao":
-        resultado = criar_resultado_validacao(estado)
+    if (
+        cenario_id == "api_0317"
+        and acao_id == "fazer_rollback"
+    ):
+        resultado = criar_resultado_rollback(
+            estado
+        )
+
+    elif (
+        cenario_id == "api_0317"
+        and acao_id == "validar_recuperacao"
+    ):
+        resultado = criar_resultado_validacao(
+            estado
+        )
 
     else:
         resultado = acao.copy()
@@ -1009,19 +742,22 @@ def processar_acao(acao_id, estado):
     resultado = aplicar_consequencias_da_ordem(
         acao_id,
         estado,
-        resultado
+        resultado,
     )
 
     estado["pontuacao"] = max(
         0,
         estado["pontuacao"]
-        + resultado["pontos"]
+        + resultado.get("pontos", 0),
     )
 
     estado["usuarios_afetados"] = max(
         0,
         estado["usuarios_afetados"]
-        + resultado["usuarios_adicionados"]
+        + resultado.get(
+            "usuarios_adicionados",
+            0,
+        ),
     )
 
     tempo_total = (
@@ -1032,7 +768,7 @@ def processar_acao(acao_id, estado):
     estado["tempo_restante"] = max(
         0,
         estado["tempo_restante"]
-        - tempo_total
+        - tempo_total,
     )
 
     if (
@@ -1054,6 +790,7 @@ def processar_acao(acao_id, estado):
     )
 
     pista = acao.get("pista")
+    pista_texto = acao.get("pista_texto")
 
     if (
         pista
@@ -1063,32 +800,24 @@ def processar_acao(acao_id, estado):
             pista
         )
 
-        resultado["mensagem"] += (
-            f" Pista encontrada: {acao['pista_texto']}"
-        )
-
-    pistas_atualizadas = set(
-        estado["pistas_encontradas"]
-    )
-
-    if "vazamento_confirmado" in pistas_atualizadas:
-        estado["fase"] = "recuperacao"
-
-    elif {
-        "pool_esgotado",
-        "pico_de_conexoes",
-    } & pistas_atualizadas:
-        estado["fase"] = "contencao"
+        if pista_texto:
+            resultado["mensagem"] += (
+                f" Pista encontrada: {pista_texto}"
+            )
 
     if resultado.get("finalizado", False):
         estado["finalizado"] = True
-        estado["fase"] = "encerrado"
 
         estado["resultado_final"] = {
             "titulo": resultado["titulo"],
             "mensagem": resultado["mensagem"],
-            "sucesso": resultado["sucesso"],
+            "sucesso": resultado.get(
+                "sucesso",
+                False,
+            ),
         }
+
+    atualizar_fase(estado)
 
     comandos_atuais = set(
         obter_comandos_disponiveis(estado)
@@ -1111,138 +840,72 @@ def processar_acao(acao_id, estado):
     return resultado, estado
 
 
-def criar_estado_inicial():
+def criar_estado_inicial(cenario_id=None):
+    cenario_id = obter_id_cenario(
+        cenario_id=cenario_id
+    )
+
+    cenario = obter_cenario(cenario_id)
+
     return {
-        "pontuacao": 100,
+        "cenario_id": cenario_id,
+        "pontuacao": cenario["pontuacao_inicial"],
         "usuarios_afetados": (
-            INCIDENTE_INICIAL["usuarios_afetados"]
+            cenario["usuarios_afetados"]
         ),
-        "tempo_restante": 600,
+        "tempo_restante": cenario["tempo_inicial"],
         "fase": "investigacao",
         "pistas_encontradas": [],
         "acoes_realizadas": [],
         "historico": [],
         "finalizado": False,
         "resultado_final": None,
+        "relatorio_final": None,
     }
 
 
-def interpretar_comando(comando):
+def interpretar_comando(comando, estado=None):
     if not comando:
         return None
 
-    comando_normalizado = " ".join(
-        comando.lower().strip().split()
+    comando_normalizado = normalizar_texto(
+        comando
     )
 
-    comandos = {
-        # Comandos gerais
+    comandos_gerais = {
         "ajuda": "ajuda",
         "help": "ajuda",
         "?": "ajuda",
         "status": "status",
-
         "reiniciar": "reiniciar_partida",
         "reiniciar partida": "reiniciar_partida",
-
-        # Investigação inicial
-        "logs": "verificar_logs",
-        "verificar logs": "verificar_logs",
-
-        "metricas": "analisar_metricas",
-        "métricas": "analisar_metricas",
-        "analisar metricas": "analisar_metricas",
-        "analisar métricas": "analisar_metricas",
-
-        "filas": "verificar_filas",
-        "verificar filas": "verificar_filas",
-
-        "externos": "verificar_servicos_externos",
-        "verificar externos": (
-            "verificar_servicos_externos"
-        ),
-        "verificar servicos externos": (
-            "verificar_servicos_externos"
-        ),
-        "verificar serviços externos": (
-            "verificar_servicos_externos"
-        ),
-
-        "cache": "verificar_cache",
-        "verificar cache": "verificar_cache",
-
-        # Investigação desbloqueada
-        "banco": "analisar_banco",
-        "analisar banco": "analisar_banco",
-
-        "deploy": "analisar_deploy",
-        "analisar deploy": "analisar_deploy",
-
-        "comparar versoes": "comparar_versoes",
-        "comparar versões": "comparar_versoes",
-
-        "rastrear requisicao": "rastrear_requisicao",
-        "rastrear requisição": "rastrear_requisicao",
-
-        "consultas lentas": (
-            "procurar_consultas_lentas"
-        ),
-
-        "inspecionar conexoes": "inspecionar_conexoes",
-        "inspecionar conexões": "inspecionar_conexoes",
-
-        # Contenção
-        "limitar trafego": "limitar_trafego",
-        "limitar tráfego": "limitar_trafego",
-
-        "ativar manutencao": "ativar_manutencao",
-        "ativar manutenção": "ativar_manutencao",
-
-        "desativar feature": "desativar_feature",
-
-        "encerrar conexoes": "encerrar_conexoes",
-        "encerrar conexões": "encerrar_conexoes",
-
-        "aumentar instancias": "aumentar_instancias",
-        "aumentar instâncias": "aumentar_instancias",
-
-        "bloquear endpoint": "bloquear_endpoint",
-        "pausar filas": "pausar_filas",
-
-        # Banco de dados
-        "reiniciar servidor": "reiniciar_servidor",
-        "reiniciar banco": "reiniciar_banco",
-        "acionar dba": "acionar_dba",
-
-        "verificar replica": "verificar_replica",
-        "verificar réplica": "verificar_replica",
-
-        "failover banco": "failover_banco",
-        "restaurar backup": "restaurar_backup",
-
-        # Correção
-        "preparar hotfix": "preparar_hotfix",
-        "testar hotfix": "testar_hotfix",
-        "aplicar hotfix": "aplicar_hotfix",
-
-        "reiniciar api controlado": (
-            "reiniciar_api_controlado"
-        ),
-
-        "restaurar feature": "restaurar_feature",
-
-        "reabrir trafego": "reabrir_trafego",
-        "reabrir tráfego": "reabrir_trafego",
-
-        "validar recuperacao": "validar_recuperacao",
-        "validar recuperação": "validar_recuperacao",
-        "validar sistema": "validar_recuperacao",
-
-        # Finalização alternativa
-        "rollback": "fazer_rollback",
-        "fazer rollback": "fazer_rollback",
     }
 
-    return comandos.get(
-        comando_normalizado
-    )
+    if comando_normalizado in comandos_gerais:
+        return comandos_gerais[
+            comando_normalizado
+        ]
+
+    if estado is None:
+        cenario = obter_cenario(
+            CENARIO_PADRAO
+        )
+    else:
+        cenario = obter_cenario_do_estado(
+            estado
+        )
+
+    for acao_id, acao in cenario["acoes"].items():
+        nomes_comando = [
+            acao["comando"],
+            *acao.get("apelidos", []),
+        ]
+
+        for nome in nomes_comando:
+            if (
+                normalizar_texto(nome)
+                == comando_normalizado
+            ):
+                return acao_id
+
+    return None

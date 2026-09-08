@@ -4,7 +4,7 @@ from flask import (
     request,
     session,
     redirect,
-    url_for
+    url_for,
 )
 
 from game import (
@@ -12,42 +12,92 @@ from game import (
     criar_estado_inicial,
     processar_acao,
     interpretar_comando,
-    obter_comandos_disponiveis
+    obter_comandos_disponiveis,
+    sortear_incidente,
 )
 
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = "chave-de-desenvolvimento-0317"
-
-
-def obter_estado():
-    estado_padrao = criar_estado_inicial()
-    estado = session.get("estado", {})
-
-    for chave, valor in estado_padrao.items():
-        estado.setdefault(chave, valor)
-
-    estado.setdefault("relatorio_final", None)
-
-    session["estado"] = estado
-
-    return estado
+app.config["SECRET_KEY"] = (
+    "chave-de-desenvolvimento-0317"
+)
 
 
 def formatar_tempo(segundos):
     minutos = segundos // 60
     segundos_restantes = segundos % 60
 
-    return f"{minutos:02d}:{segundos_restantes:02d}"
+    return (
+        f"{minutos:02d}:"
+        f"{segundos_restantes:02d}"
+    )
+
+
+def criar_nova_partida(cenario_anterior=None):
+    cenario_id = sortear_incidente(
+        cenario_anterior
+    )
+
+    return criar_estado_inicial(
+        cenario_id
+    )
+
+
+def obter_estado():
+    estado = session.get("estado")
+
+    if not isinstance(estado, dict):
+        estado = criar_nova_partida()
+        session["estado"] = estado
+
+        return estado
+
+    cenario_id = estado.get("cenario_id")
+
+    estado_padrao = criar_estado_inicial(
+        cenario_id
+    )
+
+    estado["cenario_id"] = (
+        estado_padrao["cenario_id"]
+    )
+
+    for chave, valor in estado_padrao.items():
+        estado.setdefault(chave, valor)
+
+    session["estado"] = estado
+
+    return estado
 
 
 def gerar_relatorio_final(estado):
-    resultado_final = estado.get("resultado_final") or {}
-    sucesso = resultado_final.get("sucesso", False)
+    resultado_final = (
+        estado.get("resultado_final") or {}
+    )
+
+    sucesso = resultado_final.get(
+        "sucesso",
+        False
+    )
 
     pontuacao = estado["pontuacao"]
-    usuarios_afetados = estado["usuarios_afetados"]
+
+    usuarios_afetados = (
+        estado["usuarios_afetados"]
+    )
+
+    estado_inicial = criar_estado_inicial(
+        estado["cenario_id"]
+    )
+
+    usuarios_iniciais = (
+        estado_inicial["usuarios_afetados"]
+    )
+
+    tempo_inicial = (
+        estado_inicial["tempo_restante"]
+    )
 
     historico_acoes = [
         item
@@ -73,40 +123,59 @@ def gerar_relatorio_final(estado):
         if item.get("pontos", 0) == 0
     )
 
+    impacto_relativo = (
+        usuarios_afetados / usuarios_iniciais
+        if usuarios_iniciais > 0
+        else 0
+    )
+
     if (
         sucesso
         and pontuacao >= 250
-        and usuarios_afetados <= 500
+        and impacto_relativo <= 0.5
+        and estado["tempo_restante"] > 0
     ):
         classificacao = "EXEMPLAR"
+
         avaliacao = (
-            "O incidente foi investigado, contido e recuperado "
-            "com excelente controle operacional."
+            "O incidente foi investigado, contido e "
+            "recuperado com excelente controle operacional."
         )
 
-    elif sucesso and usuarios_afetados <= 1200:
+    elif (
+        sucesso
+        and impacto_relativo <= 1
+        and estado["tempo_restante"] > 0
+    ):
         classificacao = "CONTROLADO"
+
         avaliacao = (
-            "O serviço foi recuperado com um impacto aceitável, "
-            "apesar de algumas decisões terem consumido recursos."
+            "O serviço foi recuperado com impacto "
+            "controlado e sem deixar falhas ativas."
         )
 
     elif sucesso:
         classificacao = "ARRISCADO"
+
         avaliacao = (
-            "O sistema foi recuperado, mas a resposta demorou "
-            "e muitos usuários foram afetados."
+            "O sistema foi recuperado, mas a resposta "
+            "demorou e o impacto aumentou durante a operação."
         )
 
     else:
         classificacao = "CRÍTICO"
+
         avaliacao = (
-            "A resposta não conseguiu controlar o incidente. "
-            "A sequência das decisões deve ser revisada."
+            "A resposta não conseguiu controlar o "
+            "incidente. A sequência das decisões deve "
+            "ser revisada."
         )
 
-    tempo_inicial = criar_estado_inicial()["tempo_restante"]
-    tempo_utilizado = tempo_inicial - estado["tempo_restante"]
+    tempo_utilizado = max(
+        0,
+        tempo_inicial
+        - estado["tempo_restante"]
+    )
 
     sequencia_comandos = [
         item["comando"]
@@ -118,60 +187,102 @@ def gerar_relatorio_final(estado):
         "avaliacao": avaliacao,
         "pontuacao": pontuacao,
         "usuarios_afetados": usuarios_afetados,
-        "tempo_utilizado": formatar_tempo(tempo_utilizado),
+        "tempo_utilizado": formatar_tempo(
+            tempo_utilizado
+        ),
         "tempo_restante": formatar_tempo(
             estado["tempo_restante"]
         ),
         "total_decisoes": len(historico_acoes),
-        "decisoes_corretas": decisoes_corretas,
-        "decisoes_prejudiciais": decisoes_prejudiciais,
+        "decisoes_corretas": (
+            decisoes_corretas
+        ),
+        "decisoes_prejudiciais": (
+            decisoes_prejudiciais
+        ),
         "decisoes_neutras": decisoes_neutras,
-        "sequencia_comandos": sequencia_comandos,
-        "sucesso": sucesso
+        "sequencia_comandos": (
+            sequencia_comandos
+        ),
+        "sucesso": sucesso,
     }
 
 
 @app.route("/")
 def index():
-    incidente = obter_incidente_inicial()
     estado = obter_estado()
+
+    incidente = obter_incidente_inicial(
+        estado["cenario_id"]
+    )
 
     return render_template(
         "index.html",
         incidente=incidente,
-        estado=estado
+        estado=estado,
     )
 
 
 @app.route("/comando", methods=["POST"])
 def executar_comando():
-    comando = request.form.get("comando", "")
-    incidente = obter_incidente_inicial()
     estado = obter_estado()
 
-    acao_id = interpretar_comando(comando)
+    incidente = obter_incidente_inicial(
+        estado["cenario_id"]
+    )
+
+    comando = request.form.get(
+        "comando",
+        ""
+    )
+
+    acao_id = interpretar_comando(
+        comando,
+        estado
+    )
 
     if acao_id == "reiniciar_partida":
+        cenario_anterior = estado.get(
+            "cenario_id"
+        )
+
         session.clear()
 
-        return redirect(url_for("index"))
+        session["estado"] = criar_nova_partida(
+            cenario_anterior
+        )
+
+        return redirect(
+            url_for("index")
+        )
 
     acao_executada = False
 
-    if acao_id == "ajuda":
+    if estado["finalizado"]:
+        resultado = {
+            "titulo": "Simulação encerrada",
+            "mensagem": (
+                'Digite "reiniciar" para começar '
+                "um novo incidente."
+            ),
+        }
+
+    elif acao_id == "ajuda":
         comandos = [
             "ajuda",
             "status",
-            "reiniciar"
+            "reiniciar",
         ]
 
         comandos.extend(
-            obter_comandos_disponiveis(estado)
+            obter_comandos_disponiveis(
+                estado
+            )
         )
 
         resultado = {
             "titulo": "Comandos disponíveis",
-            "mensagem": ", ".join(comandos)
+            "mensagem": ", ".join(comandos),
         }
 
     elif acao_id == "status":
@@ -182,20 +293,24 @@ def executar_comando():
         resultado = {
             "titulo": "Estado do incidente",
             "mensagem": (
-                f"Pontuação: {estado['pontuacao']} | "
+                f"Pontuação: "
+                f"{estado['pontuacao']} | "
                 f"Usuários afetados: "
                 f"{estado['usuarios_afetados']} | "
                 f"Tempo restante: {tempo} | "
                 f"Fase: {estado['fase']}"
-            )
+            ),
         }
 
     elif acao_id is None:
         resultado = {
-            "titulo": "Comando não reconhecido",
+            "titulo": (
+                "Comando não reconhecido"
+            ),
             "mensagem": (
-                'Digite "ajuda" para visualizar os comandos.'
-            )
+                'Digite "ajuda" para visualizar '
+                "os comandos disponíveis."
+            ),
         }
 
     else:
@@ -225,17 +340,22 @@ def executar_comando():
             else 0
         ),
         "impacto_usuarios": (
-            resultado.get("usuarios_adicionados", 0)
+            resultado.get(
+                "usuarios_adicionados",
+                0
+            )
             if acao_executada
             else 0
-        )
+        ),
     }
 
-    estado["historico"].append(registro)
+    estado["historico"].append(
+        registro
+    )
 
     if estado["finalizado"]:
-        estado["relatorio_final"] = gerar_relatorio_final(
-            estado
+        estado["relatorio_final"] = (
+            gerar_relatorio_final(estado)
         )
 
     session["estado"] = estado
@@ -243,15 +363,32 @@ def executar_comando():
     return render_template(
         "index.html",
         incidente=incidente,
-        estado=estado
+        estado=estado,
     )
 
 
 @app.route("/reiniciar", methods=["POST"])
 def reiniciar():
+    estado_anterior = session.get(
+        "estado",
+        {}
+    )
+
+    cenario_anterior = (
+        estado_anterior.get("cenario_id")
+        if isinstance(estado_anterior, dict)
+        else None
+    )
+
     session.clear()
 
-    return redirect(url_for("index"))
+    session["estado"] = criar_nova_partida(
+        cenario_anterior
+    )
+
+    return redirect(
+        url_for("index")
+    )
 
 
 if __name__ == "__main__":

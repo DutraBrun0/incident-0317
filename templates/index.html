@@ -8,7 +8,9 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>03:17 — Incidente em Produção</title>
+    <title>
+        {{ incidente.horario }} — {{ incidente.titulo }}
+    </title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
 
@@ -29,7 +31,7 @@
     >
 </head>
 
-<body>
+<body data-cenario="{{ incidente.id }}">
     {% set acoes_historico =
         estado.historico
         | selectattr("executada")
@@ -37,13 +39,14 @@
     %}
 
     <div class="marca-horario" aria-hidden="true">
-        03:17
+        {{ incidente.horario }}
     </div>
 
     <header class="topo">
         <div class="marca">
             <p class="marca-nome">
-                INCIDENT <strong>03:17</strong>
+                INCIDENT
+                <strong>{{ incidente.horario }}</strong>
             </p>
 
             <span
@@ -90,7 +93,7 @@
         <aside class="resumo-incidente">
             <div class="resumo-principal">
                 <p class="incidente-codigo">
-                    INCIDENTE #0317
+                    INCIDENTE #{{ incidente.codigo }}
                 </p>
 
                 <h1>{{ incidente.titulo }}</h1>
@@ -181,7 +184,10 @@
                     <span></span>
                 </div>
 
-                <p>operador — produção</p>
+                <p>
+                    operador — produção —
+                    incidente #{{ incidente.codigo }}
+                </p>
 
                 <span
                     class="terminal-minimizar"
@@ -202,11 +208,13 @@
                     </p>
 
                     <p class="linha linha-secundaria">
-                        Carregando contexto do incidente #0317...
+                        Carregando contexto do incidente
+                        #{{ incidente.codigo }}...
                     </p>
 
                     <p class="linha linha-secundaria">
-                        Digite "ajuda" para visualizar os comandos.
+                        Digite "ajuda" para visualizar
+                        os comandos.
                     </p>
 
                     <div
@@ -225,7 +233,9 @@
                         <div class="registro">
                             <p class="linha linha-comando">
                                 <span>
-                                    operador@incident-0317:~$
+                                    operador@incident-{{
+                                        incidente.codigo
+                                    }}:~$
                                 </span>
 
                                 {{ item.comando }}
@@ -248,7 +258,10 @@
                             <header class="terminal-relatorio-topo">
                                 <p>
                                     <span>[RELATÓRIO FINAL]</span>
-                                    INCIDENTE #0317 ENCERRADO
+
+                                    INCIDENTE
+                                    #{{ incidente.codigo }}
+                                    ENCERRADO
                                 </p>
 
                                 <strong
@@ -336,7 +349,7 @@
 
                             <p class="terminal-relatorio-reinicio">
                                 [SISTEMA] Digite "reiniciar"
-                                para tentar novamente.
+                                para iniciar outro incidente.
                             </p>
                         </div>
                     {% endif %}
@@ -348,7 +361,9 @@
                     method="POST"
                 >
                     <label for="comando">
-                        operador@incident-0317:~$
+                        operador@incident-{{
+                            incidente.codigo
+                        }}:~$
                     </label>
 
                     <input
