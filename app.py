@@ -1,3 +1,7 @@
+import os
+
+from dotenv import load_dotenv
+
 from flask import (
     Flask,
     render_template,
@@ -17,11 +21,38 @@ from game import (
 )
 
 
+load_dotenv()
+
+
+def obter_chave_secreta():
+    chave = os.getenv("SECRET_KEY")
+
+    if not chave:
+        raise RuntimeError(
+            "A variável SECRET_KEY não foi configurada. "
+            "Crie o arquivo .env antes de executar o projeto."
+        )
+
+    return chave
+
+
+def obter_modo_debug():
+    valor = os.getenv(
+        "FLASK_DEBUG",
+        "false",
+    )
+
+    return valor.lower() in {
+        "1",
+        "true",
+        "yes",
+        "sim",
+    }
+
+
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = (
-    "chave-de-desenvolvimento-0317"
-)
+app.config["SECRET_KEY"] = obter_chave_secreta()
 
 
 def formatar_tempo(segundos):
@@ -78,7 +109,7 @@ def gerar_relatorio_final(estado):
 
     sucesso = resultado_final.get(
         "sucesso",
-        False
+        False,
     )
 
     pontuacao = estado["pontuacao"]
@@ -173,8 +204,7 @@ def gerar_relatorio_final(estado):
 
     tempo_utilizado = max(
         0,
-        tempo_inicial
-        - estado["tempo_restante"]
+        tempo_inicial - estado["tempo_restante"],
     )
 
     sequencia_comandos = [
@@ -194,16 +224,12 @@ def gerar_relatorio_final(estado):
             estado["tempo_restante"]
         ),
         "total_decisoes": len(historico_acoes),
-        "decisoes_corretas": (
-            decisoes_corretas
-        ),
+        "decisoes_corretas": decisoes_corretas,
         "decisoes_prejudiciais": (
             decisoes_prejudiciais
         ),
         "decisoes_neutras": decisoes_neutras,
-        "sequencia_comandos": (
-            sequencia_comandos
-        ),
+        "sequencia_comandos": sequencia_comandos,
         "sucesso": sucesso,
     }
 
@@ -233,12 +259,12 @@ def executar_comando():
 
     comando = request.form.get(
         "comando",
-        ""
+        "",
     )
 
     acao_id = interpretar_comando(
         comando,
-        estado
+        estado,
     )
 
     if acao_id == "reiniciar_partida":
@@ -304,9 +330,7 @@ def executar_comando():
 
     elif acao_id is None:
         resultado = {
-            "titulo": (
-                "Comando não reconhecido"
-            ),
+            "titulo": "Comando não reconhecido",
             "mensagem": (
                 'Digite "ajuda" para visualizar '
                 "os comandos disponíveis."
@@ -320,7 +344,7 @@ def executar_comando():
 
         resultado, estado = processar_acao(
             acao_id,
-            estado
+            estado,
         )
 
         acao_executada = (
@@ -342,16 +366,14 @@ def executar_comando():
         "impacto_usuarios": (
             resultado.get(
                 "usuarios_adicionados",
-                0
+                0,
             )
             if acao_executada
             else 0
         ),
     }
 
-    estado["historico"].append(
-        registro
-    )
+    estado["historico"].append(registro)
 
     if estado["finalizado"]:
         estado["relatorio_final"] = (
@@ -371,7 +393,7 @@ def executar_comando():
 def reiniciar():
     estado_anterior = session.get(
         "estado",
-        {}
+        {},
     )
 
     cenario_anterior = (
@@ -392,4 +414,6 @@ def reiniciar():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        debug=obter_modo_debug()
+    )
