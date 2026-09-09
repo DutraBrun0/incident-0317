@@ -8,31 +8,29 @@ document.addEventListener("DOMContentLoaded", function () {
     const formulario =
         document.querySelector(".terminal-formulario");
 
-    const areaTerminal =
-        document.querySelector(".area-terminal");
+    const terminal =
+        document.getElementById("terminal");
 
     const tempoRestante =
         document.getElementById("tempoRestante");
 
-    const estadoSimulacao =
-        document.querySelector(".estado-simulacao");
+    const horarioGlitch =
+        document.querySelector(".horario-glitch");
 
-    const cenarioId =
-        document.body.dataset.cenario || "padrao";
+    const textoDecodificar =
+        document.querySelector("[data-decode]");
 
-    const prefixoHistorico =
-        "incident-simulator-historico-";
+    const codigoIncidente =
+        document.body.dataset.incidente || "0317";
 
     const chaveHistorico =
-        prefixoHistorico + cenarioId;
-
-    const simulacaoFinalizada =
-        tempoRestante?.dataset.finalizado === "true";
+        "incident-" +
+        codigoIncidente +
+        "-historico-comandos";
 
     let historicoComandos = carregarHistorico();
     let posicaoHistorico = historicoComandos.length;
     let comandoAtual = "";
-
 
     function carregarHistorico() {
         try {
@@ -54,54 +52,33 @@ document.addEventListener("DOMContentLoaded", function () {
         return [];
     }
 
-
     function salvarHistorico() {
-        sessionStorage.setItem(
-            chaveHistorico,
-            JSON.stringify(historicoComandos)
-        );
-    }
-
-
-    function limparHistoricosDoJogo() {
-        const chaves = Object.keys(
-            sessionStorage
-        );
-
-        chaves.forEach(function (chave) {
-            if (chave.startsWith(prefixoHistorico)) {
-                sessionStorage.removeItem(chave);
-            }
-        });
-    }
-
-
-    function normalizarComando(comando) {
-        return comando
-            .toLowerCase()
-            .trim()
-            .replace(/\s+/g, " ");
-    }
-
-
-    function comandoReiniciaPartida(comando) {
-        const comandoNormalizado =
-            normalizarComando(comando);
-
-        return (
-            comandoNormalizado === "reiniciar"
-            || comandoNormalizado === "reiniciar partida"
-        );
-    }
-
-
-    function rolarTerminalParaFinal() {
-        if (terminalSaida) {
-            terminalSaida.scrollTop =
-                terminalSaida.scrollHeight;
+        try {
+            sessionStorage.setItem(
+                chaveHistorico,
+                JSON.stringify(historicoComandos)
+            );
+        } catch (erro) {
+            console.log(
+                "Não foi possível salvar o histórico."
+            );
         }
     }
 
+    function rolarTerminalParaFinal() {
+        if (!terminalSaida) {
+            return;
+        }
+
+        terminalSaida.scrollTop =
+            terminalSaida.scrollHeight;
+    }
+
+    function focarCampo() {
+        if (campoComando) {
+            campoComando.focus();
+        }
+    }
 
     function levarCursorParaFinal() {
         if (!campoComando) {
@@ -117,26 +94,26 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-
-    function mostrarComandoDoHistorico() {
+    function mostrarHistorico() {
         if (!campoComando) {
             return;
         }
 
         if (
-            posicaoHistorico
-            === historicoComandos.length
+            posicaoHistorico ===
+            historicoComandos.length
         ) {
             campoComando.value =
                 comandoAtual;
         } else {
             campoComando.value =
-                historicoComandos[posicaoHistorico];
+                historicoComandos[
+                    posicaoHistorico
+                ];
         }
 
         levarCursorParaFinal();
     }
-
 
     function formatarTempo(totalSegundos) {
         const minutos =
@@ -146,12 +123,11 @@ document.addEventListener("DOMContentLoaded", function () {
             totalSegundos % 60;
 
         return (
-            String(minutos).padStart(2, "0")
-            + ":"
-            + String(segundos).padStart(2, "0")
+            String(minutos).padStart(2, "0") +
+            ":" +
+            String(segundos).padStart(2, "0")
         );
     }
-
 
     function iniciarContador() {
         if (!tempoRestante) {
@@ -163,20 +139,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 tempoRestante.dataset.segundos
             );
 
-        if (!Number.isFinite(segundosIniciais)) {
+        const finalizado =
+            tempoRestante.dataset.finalizado ===
+            "true";
+
+        if (
+            !Number.isFinite(segundosIniciais)
+        ) {
             return;
         }
 
         tempoRestante.textContent =
             formatarTempo(segundosIniciais);
 
-        if (simulacaoFinalizada) {
+        if (finalizado) {
             return;
         }
 
         const inicio = Date.now();
 
-        function atualizarContador() {
+        function atualizar() {
             const segundosPassados =
                 Math.floor(
                     (Date.now() - inicio) / 1000
@@ -185,67 +167,141 @@ document.addEventListener("DOMContentLoaded", function () {
             const segundosAtuais =
                 Math.max(
                     0,
-                    segundosIniciais
-                    - segundosPassados
+                    segundosIniciais -
+                    segundosPassados
                 );
 
             tempoRestante.textContent =
                 formatarTempo(segundosAtuais);
 
+            if (segundosAtuais <= 60) {
+                tempoRestante.classList.add(
+                    "tempo-critico"
+                );
+            }
+
             return segundosAtuais;
         }
 
-        const intervalo =
-            setInterval(function () {
-                if (atualizarContador() === 0) {
+        atualizar();
+
+        const intervalo = setInterval(
+            function () {
+                if (atualizar() === 0) {
                     clearInterval(intervalo);
                 }
-            }, 1000);
+            },
+            1000
+        );
     }
 
-
-    function prepararPartidaFinalizada() {
-        if (!simulacaoFinalizada) {
+    function decodificarTexto() {
+        if (!textoDecodificar) {
             return;
         }
 
-        if (estadoSimulacao) {
-            estadoSimulacao.classList.add(
-                "simulacao-finalizada"
-            );
+        const textoFinal =
+            textoDecodificar.dataset.decode;
+
+        if (!textoFinal) {
+            return;
         }
 
-        if (campoComando) {
-            campoComando.value = "";
+        const caracteres =
+            "01#$%&*@<>/[]";
 
-            campoComando.placeholder =
-                'Digite "reiniciar"';
+        let progresso = 0;
 
-            campoComando.setAttribute(
-                "aria-label",
-                'Simulação encerrada. Digite "reiniciar".'
-            );
-        }
+        const intervalo = setInterval(
+            function () {
+                textoDecodificar.textContent =
+                    textoFinal
+                        .split("")
+                        .map(
+                            function (
+                                caractere,
+                                indice
+                            ) {
+                                if (
+                                    caractere === " "
+                                ) {
+                                    return " ";
+                                }
+
+                                if (
+                                    indice < progresso
+                                ) {
+                                    return caractere;
+                                }
+
+                                const posicao =
+                                    Math.floor(
+                                        Math.random() *
+                                        caracteres.length
+                                    );
+
+                                return caracteres[
+                                    posicao
+                                ];
+                            }
+                        )
+                        .join("");
+
+                progresso += 0.55;
+
+                if (
+                    progresso >=
+                    textoFinal.length
+                ) {
+                    clearInterval(intervalo);
+
+                    textoDecodificar.textContent =
+                        textoFinal;
+                }
+            },
+            35
+        );
     }
 
+    function executarGlitch() {
+        if (!horarioGlitch) {
+            return;
+        }
 
-    if (campoComando) {
-        campoComando.focus();
-
-        campoComando.addEventListener(
-            "input",
-            function () {
-                campoComando.setCustomValidity("");
-            }
+        horarioGlitch.classList.add(
+            "glitch-ativo"
         );
 
+        setTimeout(
+            function () {
+                horarioGlitch.classList.remove(
+                    "glitch-ativo"
+                );
+            },
+            180
+        );
+    }
+
+    function iniciarGlitch() {
+        if (!horarioGlitch) {
+            return;
+        }
+
+        setTimeout(
+            executarGlitch,
+            650
+        );
+
+        setInterval(
+            executarGlitch,
+            4200
+        );
+    }
+
+    if (campoComando) {
         campoComando.addEventListener(
             "keydown",
             function (evento) {
-                if (simulacaoFinalizada) {
-                    return;
-                }
-
                 if (evento.key === "ArrowUp") {
                     evento.preventDefault();
 
@@ -256,36 +312,39 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
 
                     if (
-                        posicaoHistorico
-                        === historicoComandos.length
+                        posicaoHistorico ===
+                        historicoComandos.length
                     ) {
                         comandoAtual =
                             campoComando.value;
                     }
 
-                    if (posicaoHistorico > 0) {
+                    if (
+                        posicaoHistorico > 0
+                    ) {
                         posicaoHistorico -= 1;
                     }
 
-                    mostrarComandoDoHistorico();
+                    mostrarHistorico();
                 }
 
-                if (evento.key === "ArrowDown") {
+                if (
+                    evento.key === "ArrowDown"
+                ) {
                     evento.preventDefault();
 
                     if (
-                        posicaoHistorico
-                        < historicoComandos.length
+                        posicaoHistorico <
+                        historicoComandos.length
                     ) {
                         posicaoHistorico += 1;
                     }
 
-                    mostrarComandoDoHistorico();
+                    mostrarHistorico();
                 }
             }
         );
     }
-
 
     if (formulario && campoComando) {
         formulario.addEventListener(
@@ -299,38 +358,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
 
-                if (
-                    simulacaoFinalizada
-                    && !comandoReiniciaPartida(
-                        comando
-                    )
-                ) {
-                    evento.preventDefault();
-
-                    campoComando.setCustomValidity(
-                        "A simulação terminou. "
-                        + 'Digite "reiniciar".'
-                    );
-
-                    campoComando.reportValidity();
-                    campoComando.focus();
-
-                    return;
-                }
-
-                if (
-                    comandoReiniciaPartida(comando)
-                ) {
-                    limparHistoricosDoJogo();
-                    return;
-                }
-
                 const ultimoComando =
                     historicoComandos[
                         historicoComandos.length - 1
                     ];
 
-                if (ultimoComando !== comando) {
+                if (
+                    ultimoComando !== comando
+                ) {
                     historicoComandos.push(
                         comando
                     );
@@ -340,32 +375,43 @@ document.addEventListener("DOMContentLoaded", function () {
                     historicoComandos.slice(-50);
 
                 salvarHistorico();
-            }
-        );
-    }
 
-
-    if (areaTerminal && campoComando) {
-        areaTerminal.addEventListener(
-            "click",
-            function () {
-                const selecao =
-                    window.getSelection();
-
-                const textoSelecionado =
-                    selecao
-                        ? selecao.toString()
-                        : "";
-
-                if (!textoSelecionado) {
-                    campoComando.focus();
+                if (terminal) {
+                    terminal.classList.add(
+                        "enviando"
+                    );
                 }
             }
         );
     }
 
+    if (terminal && campoComando) {
+        terminal.addEventListener(
+            "click",
+            function () {
+                const textoSelecionado =
+                    window
+                        .getSelection()
+                        .toString();
 
-    prepararPartidaFinalizada();
+                if (!textoSelecionado) {
+                    focarCampo();
+                }
+            }
+        );
+    }
+
+    window.addEventListener(
+        "pageshow",
+        function () {
+            rolarTerminalParaFinal();
+            focarCampo();
+        }
+    );
+
     rolarTerminalParaFinal();
+    focarCampo();
     iniciarContador();
+    decodificarTexto();
+    iniciarGlitch();
 });

@@ -13,15 +13,10 @@
     </title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link
-        rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin
-    >
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap"
         rel="stylesheet"
     >
 
@@ -31,411 +26,358 @@
     >
 </head>
 
-<body data-cenario="{{ incidente.id }}">
-    {% set acoes_historico =
-        estado.historico
-        | selectattr("executada")
-        | list
-    %}
+{% set fase = estado.fase | lower %}
 
-    <div class="marca-horario" aria-hidden="true">
-        {{ incidente.horario }}
-    </div>
+<body
+    class="{% if estado.historico %}sessao-em-andamento{% endif %}"
+    data-incidente="{{ incidente.codigo }}"
+    data-primeira-exibicao="{{ 'false' if estado.historico else 'true' }}"
+>
+    <div class="campo-rosa" aria-hidden="true"></div>
+    <div class="ruido" aria-hidden="true"></div>
 
-    <header class="topo">
-        <div class="marca">
-            <p class="marca-nome">
-                INCIDENT
-                <strong>{{ incidente.horario }}</strong>
-            </p>
+    <div class="interface">
+        <header class="cabecalho">
+            <section class="horario-principal">
+                <p class="sinal-critico">
+                    SINAL CRÍTICO<br>
+                    RESPOSTA EM ANDAMENTO
+                </p>
 
-            <span
-                class="marca-divisor"
-                aria-hidden="true"
-            ></span>
+                <p class="nome-projeto">
+                    INCIDENT RESPONSE<br>
+                    SIMULATOR
+                </p>
 
-            <div class="marca-descricao">
-                <p>SIMULADOR DE RESPOSTA A INCIDENTES</p>
+                <h1
+                    class="horario-glitch"
+                    data-text="{{ incidente.horario }}"
+                >
+                    {{ incidente.horario }}
+                </h1>
+            </section>
 
-                <span>
-                    PESSOAS / SISTEMAS / DECISÕES / IMPACTO
-                </span>
-            </div>
-        </div>
-
-        <div class="topo-status">
-            <div class="estado-simulacao">
-                <span
-                    class="estado-ponto"
-                    aria-hidden="true"
-                ></span>
-
-                {% if estado.finalizado %}
-                    SIMULAÇÃO ENCERRADA
-                {% else %}
-                    SIMULAÇÃO ATIVA
-                {% endif %}
-            </div>
-
-            <span
-                class="status-divisor"
-                aria-hidden="true"
-            ></span>
-
-            <div class="ambiente">
-                <span>AMBIENTE</span>
-                <strong>PRODUÇÃO</strong>
-            </div>
-        </div>
-    </header>
-
-    <main class="conteudo">
-        <aside class="resumo-incidente">
-            <div class="resumo-principal">
-                <p class="incidente-codigo">
+            <section class="resumo-incidente">
+                <p class="codigo-incidente">
                     INCIDENTE #{{ incidente.codigo }}
                 </p>
 
-                <h1>{{ incidente.titulo }}</h1>
+                <h2
+                    data-decode="{{ incidente.titulo | upper }}"
+                >
+                    {{ incidente.titulo }}
+                </h2>
 
-                <p class="incidente-descricao">
-                    {{ incidente.descricao }}
-                </p>
+                <div class="resumo-rodape">
+                    <span class="nivel">
+                        {{ incidente.nivel }}
+                    </span>
 
-                <div class="nivel-incidente">
-                    <span
-                        class="nivel-barra"
-                        aria-hidden="true"
-                    ></span>
-
-                    <div>
-                        <strong>{{ incidente.nivel }}</strong>
-
-                        <p>
-                            USUÁRIOS AFETADOS •
-                            SERVIÇOS INDISPONÍVEIS
-                        </p>
-                    </div>
+                    <p>{{ incidente.descricao }}</p>
                 </div>
-            </div>
+            </section>
+        </header>
 
+        <main class="area-operacao">
             <section
-                class="linha-tempo"
-                aria-labelledby="titulo-linha-tempo"
+                class="terminal"
+                id="terminal"
+                aria-label="Terminal do incidente"
             >
-                <header>
-                    <h2 id="titulo-linha-tempo">
-                        LINHA DO TEMPO
-                    </h2>
+                <header class="terminal-topo">
+                    <div class="terminal-controles" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
 
-                    <span>SESSÃO ATUAL</span>
+                    <p>
+                        operador@incident-{{ incidente.codigo }}: ~
+                    </p>
+
+                    <div class="terminal-estado">
+                        <span></span>
+
+                        {% if estado.finalizado %}
+                            CLOSED
+                        {% else %}
+                            LIVE
+                        {% endif %}
+                    </div>
                 </header>
 
+                <div class="terminal-conteudo">
+                    <div
+                        class="terminal-saida"
+                        id="terminalSaida"
+                        aria-live="polite"
+                    >
+                        <p class="linha linha-clara">
+                            Conexão com produção estabelecida.
+                        </p>
+
+                        <p class="linha linha-secundaria">
+                            Incidente #{{ incidente.codigo }}
+                            carregado às {{ incidente.horario }}.
+                        </p>
+
+                        <p class="linha linha-secundaria">
+                            Digite "ajuda" para visualizar os comandos.
+                        </p>
+
+                        <div class="separador-terminal"></div>
+
+                        {% for log in incidente.logs %}
+                            <p class="linha linha-log">
+                                <span>[LOG]</span>
+                                {{ log }}
+                            </p>
+                        {% endfor %}
+
+                        {% for item in estado.historico %}
+                            <div class="registro">
+                                <p class="linha linha-comando">
+                                    <span>
+                                        operador@incident-{{ incidente.codigo }}:~$
+                                    </span>
+
+                                    {{ item.comando }}
+                                </p>
+
+                                <p class="linha linha-resposta">
+                                    <span>[{{ item.titulo }}]</span>
+                                    {{ item.resposta }}
+                                </p>
+                            </div>
+                        {% endfor %}
+
+                        {% if estado.finalizado %}
+                            <section class="
+                                relatorio-final
+                                {% if estado.resultado_final.sucesso %}
+                                    resultado-sucesso
+                                {% else %}
+                                    resultado-derrota
+                                {% endif %}
+                            ">
+                                <header>
+                                    <span>[RELATÓRIO FINAL]</span>
+
+                                    <strong>
+                                        {% if estado.resultado_final.sucesso %}
+                                            INCIDENTE RESOLVIDO
+                                        {% else %}
+                                            INCIDENTE NÃO RESOLVIDO
+                                        {% endif %}
+                                    </strong>
+                                </header>
+
+                                <div class="resultado-dados">
+                                    <p>
+                                        PONTUAÇÃO
+                                        <strong>
+                                            {{ estado.pontuacao }}
+                                        </strong>
+                                    </p>
+
+                                    <p>
+                                        USUÁRIOS
+                                        <strong>
+                                            {{ estado.usuarios_afetados }}
+                                        </strong>
+                                    </p>
+
+                                    <p>
+                                        AÇÕES
+                                        <strong>
+                                            {{ estado.acoes_realizadas | length }}
+                                        </strong>
+                                    </p>
+
+                                    <p>
+                                        PISTAS
+                                        <strong>
+                                            {{ estado.pistas_encontradas | length }}
+                                        </strong>
+                                    </p>
+                                </div>
+
+                                <p class="resultado-mensagem">
+                                    <strong>
+                                        {{ estado.resultado_final.titulo }}
+                                    </strong>
+
+                                    {{ estado.resultado_final.mensagem }}
+                                </p>
+                            </section>
+
+                            <p class="linha linha-secundaria">
+                                Digite "reiniciar" para iniciar outro cenário.
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <form
+                        class="terminal-formulario"
+                        action="{{ url_for('executar_comando') }}"
+                        method="POST"
+                    >
+                        <label for="comando">
+                            operador@incident-{{ incidente.codigo }}:~$
+                        </label>
+
+                        <input
+                            type="text"
+                            id="comando"
+                            name="comando"
+                            aria-label="Digite um comando"
+                            placeholder="{% if estado.finalizado %}Digite reiniciar{% else %}Digite ajuda{% endif %}"
+                            autocomplete="off"
+                            spellcheck="false"
+                            autofocus
+                            required
+                        >
+
+                        <button
+                            class="somente-leitor"
+                            type="submit"
+                        >
+                            Executar
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <aside
+                class="progresso-lateral"
+                aria-label="Progresso do incidente"
+            >
+                <div class="progresso-marca">
+                    <span>INCIDENT {{ incidente.horario }}</span>
+                </div>
+
                 <ol>
-                    <li class="evento evento-ativo">
-                        <span
-                            class="evento-marcador"
-                            aria-hidden="true"
-                        ></span>
+                    <li class="
+                        {% if fase == 'investigacao' %}
+                            etapa-ativa
+                        {% elif fase in ['contencao', 'recuperacao', 'encerrado'] %}
+                            etapa-concluida
+                        {% endif %}
+                    ">
+                        <span class="ponto-etapa"></span>
 
                         <div>
-                            <strong>
-                                {{ incidente.horario }}
-                            </strong>
-
-                            <p>
-                                Incidente detectado em produção
-                            </p>
+                            <small>01</small>
+                            <strong>INVESTIGAÇÃO</strong>
                         </div>
                     </li>
 
-                    {% for item in acoes_historico %}
-                        <li class="evento">
-                            <span
-                                class="evento-marcador"
-                                aria-hidden="true"
-                            ></span>
+                    <li class="
+                        {% if fase == 'contencao' %}
+                            etapa-ativa
+                        {% elif fase in ['recuperacao', 'encerrado'] %}
+                            etapa-concluida
+                        {% endif %}
+                    ">
+                        <span class="ponto-etapa"></span>
 
-                            <div>
-                                <strong>
-                                    AÇÃO
-                                    {{ "%02d" | format(loop.index) }}
-                                </strong>
+                        <div>
+                            <small>02</small>
+                            <strong>CONTENÇÃO</strong>
+                        </div>
+                    </li>
 
-                                <p>{{ item.titulo }}</p>
-                            </div>
-                        </li>
-                    {% endfor %}
+                    <li class="
+                        {% if fase == 'recuperacao' %}
+                            etapa-ativa
+                        {% elif fase == 'encerrado' %}
+                            etapa-concluida
+                        {% endif %}
+                    ">
+                        <span class="ponto-etapa"></span>
+
+                        <div>
+                            <small>03</small>
+                            <strong>RECUPERAÇÃO</strong>
+                        </div>
+                    </li>
                 </ol>
-            </section>
-        </aside>
 
-        <section
-            class="area-terminal"
-            aria-label="Terminal do incidente"
-        >
-            <header class="terminal-topo">
-                <div
-                    class="terminal-controles"
-                    aria-hidden="true"
+                {% if estado.finalizado %}
+                    <span class="progresso-final">
+                        ENCERRADO
+                    </span>
+                {% endif %}
+            </aside>
+        </main>
+
+        <footer class="metricas">
+            <article class="metrica metrica-usuarios">
+                <strong>{{ estado.usuarios_afetados }}</strong>
+                <span>IMPACTADOS</span>
+            </article>
+
+            <div class="linha-pulso" aria-hidden="true">
+                <span></span>
+
+                <svg
+                    viewBox="0 0 160 30"
+                    preserveAspectRatio="none"
                 >
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
+                    <polyline
+                        points="
+                            0,15
+                            35,15
+                            43,15
+                            48,8
+                            53,22
+                            59,4
+                            65,25
+                            72,13
+                            80,15
+                            91,15
+                            97,10
+                            103,19
+                            110,15
+                            160,15
+                        "
+                    />
+                </svg>
 
-                <p>
-                    operador — produção —
-                    incidente #{{ incidente.codigo }}
-                </p>
-
-                <span
-                    class="terminal-minimizar"
-                    aria-hidden="true"
-                >
-                    ─
-                </span>
-            </header>
-
-            <div class="terminal-corpo">
-                <div
-                    class="terminal-saida"
-                    id="terminalSaida"
-                    aria-live="polite"
-                >
-                    <p class="linha linha-clara">
-                        Conexão com produção estabelecida.
-                    </p>
-
-                    <p class="linha linha-secundaria">
-                        Carregando contexto do incidente
-                        #{{ incidente.codigo }}...
-                    </p>
-
-                    <p class="linha linha-secundaria">
-                        Digite "ajuda" para visualizar
-                        os comandos.
-                    </p>
-
-                    <div
-                        class="terminal-espaco"
-                        aria-hidden="true"
-                    ></div>
-
-                    {% for log in incidente.logs %}
-                        <p class="linha linha-log">
-                            <span>[LOG]</span>
-                            {{ log }}
-                        </p>
-                    {% endfor %}
-
-                    {% for item in estado.historico %}
-                        <div class="registro">
-                            <p class="linha linha-comando">
-                                <span>
-                                    operador@incident-{{
-                                        incidente.codigo
-                                    }}:~$
-                                </span>
-
-                                {{ item.comando }}
-                            </p>
-
-                            <p class="linha linha-resposta">
-                                <span>
-                                    [{{ item.titulo }}]
-                                </span>
-
-                                {{ item.resposta }}
-                            </p>
-                        </div>
-                    {% endfor %}
-
-                    {% if estado.finalizado and estado.relatorio_final %}
-                        {% set relatorio = estado.relatorio_final %}
-
-                        <div class="terminal-relatorio">
-                            <header class="terminal-relatorio-topo">
-                                <p>
-                                    <span>[RELATÓRIO FINAL]</span>
-
-                                    INCIDENTE
-                                    #{{ incidente.codigo }}
-                                    ENCERRADO
-                                </p>
-
-                                <strong
-                                    class="
-                                        {% if relatorio.sucesso %}
-                                            terminal-relatorio-sucesso
-                                        {% else %}
-                                            terminal-relatorio-falha
-                                        {% endif %}
-                                    "
-                                >
-                                    {{ relatorio.classificacao }}
-                                </strong>
-                            </header>
-
-                            <div class="terminal-relatorio-dados">
-                                <p>
-                                    <span>STATUS</span>
-
-                                    <strong>
-                                        {% if relatorio.sucesso %}
-                                            RESOLVIDO
-                                        {% else %}
-                                            NÃO RESOLVIDO
-                                        {% endif %}
-                                    </strong>
-                                </p>
-
-                                <p>
-                                    <span>PONTUAÇÃO</span>
-
-                                    <strong>
-                                        {{ relatorio.pontuacao }}
-                                    </strong>
-                                </p>
-
-                                <p>
-                                    <span>USUÁRIOS</span>
-
-                                    <strong>
-                                        {{ relatorio.usuarios_afetados }}
-                                    </strong>
-                                </p>
-
-                                <p>
-                                    <span>TEMPO USADO</span>
-
-                                    <strong>
-                                        {{ relatorio.tempo_utilizado }}
-                                    </strong>
-                                </p>
-
-                                <p>
-                                    <span>POSITIVAS</span>
-
-                                    <strong>
-                                        {{ relatorio.decisoes_corretas }}
-                                    </strong>
-                                </p>
-
-                                <p>
-                                    <span>NEGATIVAS</span>
-
-                                    <strong>
-                                        {{ relatorio.decisoes_prejudiciais }}
-                                    </strong>
-                                </p>
-                            </div>
-
-                            <p class="terminal-relatorio-texto">
-                                <span>[ANÁLISE]</span>
-                                {{ relatorio.avaliacao }}
-                            </p>
-
-                            {% if relatorio.sequencia_comandos %}
-                                <p class="terminal-relatorio-texto">
-                                    <span>[SEQUÊNCIA]</span>
-
-                                    {{
-                                        relatorio.sequencia_comandos
-                                        | join(" → ")
-                                    }}
-                                </p>
-                            {% endif %}
-
-                            <p class="terminal-relatorio-reinicio">
-                                [SISTEMA] Digite "reiniciar"
-                                para iniciar outro incidente.
-                            </p>
-                        </div>
-                    {% endif %}
-                </div>
-
-                <form
-                    class="terminal-formulario"
-                    action="{{ url_for('executar_comando') }}"
-                    method="POST"
-                >
-                    <label for="comando">
-                        operador@incident-{{
-                            incidente.codigo
-                        }}:~$
-                    </label>
-
-                    <input
-                        type="text"
-                        id="comando"
-                        name="comando"
-                        aria-label="Digite um comando"
-                        autocomplete="off"
-                        spellcheck="false"
-                        autofocus
-                        required
-                    >
-
-                    <button
-                        class="somente-leitor"
-                        type="submit"
-                    >
-                        Executar comando
-                    </button>
-                </form>
+                <span></span>
             </div>
-        </section>
-    </main>
 
-    <footer
-        class="metricas"
-        aria-label="Estado atual da simulação"
-    >
-        <article class="metrica">
-            <span>USUÁRIOS</span>
+            <article class="metrica metrica-tempo">
+                <strong
+                    id="tempoRestante"
+                    data-segundos="{{ estado.tempo_restante }}"
+                    data-finalizado="{{ 'true' if estado.finalizado else 'false' }}"
+                >
+                    {{ "%02d" | format(estado.tempo_restante // 60) }}:{{ "%02d" | format(estado.tempo_restante % 60) }}
+                </strong>
 
-            <strong>
-                {{ estado.usuarios_afetados }}
-            </strong>
+                <span>RESTANTES</span>
+            </article>
 
-            <p>AFETADOS NO MOMENTO</p>
-        </article>
+            <div class="divisor-metrica" aria-hidden="true"></div>
 
-        <article class="metrica">
-            <span>TEMPO RESTANTE</span>
+            <article class="metrica metrica-fase">
+                <span>FASE ATUAL</span>
 
-            <strong
-                id="tempoRestante"
-                data-segundos="{{ estado.tempo_restante }}"
-                data-finalizado="{% if estado.finalizado %}true{% else %}false{% endif %}"
-            >
-                {{ estado.tempo_restante // 60 }} MIN
-            </strong>
-
-            <p>PARA CONTER O INCIDENTE</p>
-        </article>
-
-        <article class="metrica">
-            <span>DECISÕES</span>
-
-            <strong>
-                {{ estado.acoes_realizadas | length }}
-            </strong>
-
-            <p>EXECUTADAS</p>
-        </article>
-
-        <article class="metrica">
-            <span>PONTUAÇÃO</span>
-
-            <strong>
-                {{ estado.pontuacao }}
-            </strong>
-
-            <p>PONTOS ATUAIS</p>
-        </article>
-    </footer>
+                <strong>
+                    {% if fase == "investigacao" %}
+                        01 — INVESTIGAÇÃO
+                    {% elif fase == "contencao" %}
+                        02 — CONTENÇÃO
+                    {% elif fase == "recuperacao" %}
+                        03 — RECUPERAÇÃO
+                    {% else %}
+                        INCIDENTE ENCERRADO
+                    {% endif %}
+                </strong>
+            </article>
+        </footer>
+    </div>
 
     <script
         src="{{ url_for('static', filename='js/game.js') }}"
