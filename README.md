@@ -15,8 +15,7 @@ Investigue falhas, encontre pistas e tome decisões antes que o sistema saia de 
 <img
     src="docs/preview.png"
     alt="Interface do simulador Incident 03:17"
-    width="100%"
->
+    width="100%">
 
 <br>
 
