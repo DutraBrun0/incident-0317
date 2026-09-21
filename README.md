@@ -162,12 +162,6 @@ Isso permite que uma mesma situação tenha resultados diferentes dependendo da 
 - CSS3
 - JavaScript
 
-### Qualidade
-
-- Pytest
-- Git
-- GitHub
-
 ---
 
 ## Estrutura do projeto
